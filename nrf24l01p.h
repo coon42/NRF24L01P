@@ -1,9 +1,16 @@
 #include "Energia.h"
 
+//#define NRF24_DEBUG 1
+
+#ifdef NRF24_DEBUG 
+#define NRFDBG(functionName) Serial.println(functionName);
+#else 
+#define NRFDBG(functionName)
+#endif
+
 // SPI GPIO config
 #define CHIP_ENABLE_PIN PE_0 // CE
 #define CHIP_SELECT_PIN PE_1 // CSN
-
 
 
 // Commands
@@ -37,12 +44,12 @@
 #define REG_RX_ADDR_P4           0x0E
 #define REG_RX_ADDR_P5           0x0F
 #define REG_TX_ADDR              0x10
-#define REG_PW_P0                0x11
-#define REG_PW_P1                0x12
-#define REG_PW_P2                0x13
-#define REG_PW_P3                0x14
-#define REG_PW_P4                0x15
-#define REG_PW_P5                0x16
+#define REG_RX_PW_P0             0x11
+#define REG_RX_PW_P1             0x12
+#define REG_RX_PW_P2             0x13
+#define REG_RX_PW_P3             0x14
+#define REG_RX_PW_P4             0x15
+#define REG_RX_PW_P5             0x16
 #define REG_FIFO_STATUS          0x17
 // #define REG_ACK_PLD           N/A ???
 // #define REG_TX_PLD            N/A ???
@@ -78,27 +85,79 @@
 #define ERX_P1                   0x02
 #define ERX_P0                   0x01
 
+// RF_SETUP
+#define CONT_WAVE                0x80      
+#define RF_DR_LOW                0x40
+#define PLL_LOCK                 0x20
+#define RF_DR_HIGH               0x10
+enum {RF_PWR_0, RF_PWR_1, RF_PWR_2, RF_PWR_3};
+enum {AW_ILLEGAL, AW_3BYTES, AW_4BYTES, AW_5BYTES};
+
+
+
 // TODO: add rest?
+
+
+
+// Data Rates
+enum { SPEED_250K, SPEED_1M, SPEED_2M };
 
 class NRF24 {
   public:
-    NRF24(byte channel);
-  
-    void setRFChannel(byte channel);
-    void enableShockburst(byte pipeId, boolean enable);
- 
-    unsigned int readRegister(byte reg);
-//    void writeRegister(byte register, byte value);     
-   
-  uint8_t readRegister(uint8_t reg, uint8_t* dataIn, uint8_t len);
-  uint8_t writeRegister(uint8_t reg, uint8_t* dataOut, uint8_t len);
+    void init(uint8_t channel);
+    void powerUp(bool enable);     // CONFIG
+    void enableCRC(uint8_t numBytes);
+    void listenMode(bool enable);
+    void enableShockburst(byte pipeId, boolean enable); // EN_AA
+    void enableDataPipe(byte pipeId, boolean enable);   // EN_RXADDR
+    void setAddressWidth(uint8_t numBytes);             // SETUP_AW
+    void setRFChannel(uint8_t channel);                 // RF_CH
+    void setDataRate(uint8_t dataRate);                 // RF_SETUP
+    void setXmitPower(uint8_t powerLevel);              // RF_SETUP
+    void setRxAddr(uint8_t* addr);
+    void setTxAddr(uint8_t* addr);                      // RX_ADDR_P0 (TODO: support all pipes. only pipe 0 is supported yet.)
+    void setPayloadSize(uint8_t size);                  // RX_PW_P0
+    void setRxAdress(uint8_t* addr, int adressLen);
+    
+    
+    // register
+    uint8_t readRegister(uint8_t reg, uint8_t* dataIn);
+    uint8_t readRegister(uint8_t reg, uint8_t* dataIn, uint8_t len);
+    uint8_t writeRegister(uint8_t reg, uint8_t* dataOut);
+    uint8_t writeRegister(uint8_t reg, uint8_t* dataOut, uint8_t len);
+    
+    
+    // TODO: SETUP_RETR
 
- 
+    // RF_SETUP
+    // TODO: 
+    //   CONST_WAVE
+    //   RF_DR_LOW
+    //   PLL_LOCK
+    //   RF_PWR
+    
+    // TODO: STATUS
+    // TODO: OBSERVE_TX
+    // TODO: RPD
+    
+    // getters
+    bool crcIsEnabled();  // CONFIG
+    uint8_t crcGetEncodingScheme();
+    bool isPoweredOn();
+    bool shockburstIsEnabled(uint8_t pipeId);
+  
+    uint8_t getRFChannel(); // RF_CH
+
+    
 private:
     void transferSync(uint8_t *dataout,uint8_t *datain,uint8_t len);
     void transmitSync(uint8_t *dataout,uint8_t len);
     
     void csnLow();
     void csnHigh();
-
+    
+    // binary helpers
+    void setMask(uint8_t* var, uint8_t mask) { *var |= mask; }
+    void resetMask(uint8_t* var, uint8_t mask) { *var &= ~(mask); }
+    void setMaskOfRegisterIfTrue(uint8_t reg, uint8_t mask, bool set);
 };

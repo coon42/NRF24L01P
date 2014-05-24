@@ -20,23 +20,38 @@ by coon
 
 #include "nrf24l01p.h"
 
+NRF24 radio;
+
+
 void setup()
 {
    Serial.begin(9600);
-   Serial.println("NRF24L01+ Library\n");
-   Serial.println("-----------------\n");
+   radio.init(81);
+   
+   Serial.println("NRF24L01+ Library");
+   Serial.println("-----------------");
+}
+
+void printConfig() {
+  radio.enableCRC(1);
+  
+  Serial.println("NRF24 Configuration:");
+  Serial.print("RF Channel: "); Serial.println(radio.getRFChannel());
+  Serial.print("CRC: "); Serial.println(radio.crcIsEnabled() ? "Enabled" : "Disabled");
+  Serial.print("Encoding scheme: "); Serial.println(radio.crcGetEncodingScheme());
+  Serial.print("Power Status: "); Serial.println(radio.isPoweredOn() ? "On" : "Off");
+  Serial.println("Shockburst:");
+  
+  for(int i = 0; i < 6; i++) {
+    Serial.print("  P"); Serial.print(i);
+    Serial.print(": ");
+    Serial.println(radio.shockburstIsEnabled(i) ? "Enabled" : "Disabled");
+  }
 }
 
 void loop()
 {
-  NRF24 radio(81);
-  uint8_t r[] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08};
-  uint8_t rv[] = {0x23};
-  radio.writeRegister(REG_CONFIG, rv, 1);
-  radio.readRegister(REG_CONFIG, r, 8);
-  
-  Serial.print("CONFIG: ");
-  Serial.print(r[0]);
+  printConfig();
  
   
   while(true) {
