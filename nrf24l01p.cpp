@@ -143,6 +143,12 @@ void NRF24::enableDataPipe(byte pipeId, boolean enable) {
   setMaskOfRegisterIfTrue(REG_EN_RXADDR, 1 << pipeId, enable);
 }
 
+// SETUP_AW
+void NRF24::setAddressWidth(uint8_t numBytes) {
+  uint8_t setupaw = numBytes == 5 ? 3 : numBytes == 4 ? 2 : numBytes == 3 ? 1 : 0;
+  writeRegister(REG_SETUP_AW, &setupaw);
+}
+
 // RF_CH
 void NRF24::setRFChannel(uint8_t channel) {
   writeRegister(REG_RF_CH, &channel);
@@ -200,18 +206,99 @@ void NRF24::setXmitPower(uint8_t powerLevel) {
   writeRegister(REG_RF_SETUP, &rfSetup);
 }
 
-// TODO: support all pipes. only pipe 0 is supported yet.
-void NRF24::setRxAddr(uint8_t* addr) {
-  writeRegister(REG_RX_ADDR_P1, addr, 5);
+
+void NRF24::setRxAddress(uint8_t pipeId, uint8_t* rxAddr) {
+  uint8_t addressWidth = getAddressWidths();
+  
+  switch(pipeId) {
+    case 0: 
+      writeRegister(REG_RX_ADDR_P0, rxAddr, addressWidth);
+      break;
+    case 1:
+      writeRegister(REG_RX_ADDR_P1, rxAddr, addressWidth);
+      break;
+    case 2:
+      writeRegister(REG_RX_ADDR_P2, rxAddr, 1);
+      break;
+    case 3:
+      writeRegister(REG_RX_ADDR_P3, rxAddr, 1);
+      break;
+    case 4:
+      writeRegister(REG_RX_ADDR_P4, rxAddr, 1);
+      break;
+    case 5:
+      writeRegister(REG_RX_ADDR_P5, rxAddr, 1);
+      break;
+    default:
+      break;
+  }
 }
 
-// TODO: support all pipes. only pipe 0 is supported yet.
-void NRF24::setTxAddr(uint8_t* addr) {
+
+void NRF24::setTxAddress(uint8_t* addr) {
   writeRegister(REG_TX_ADDR, addr, 5);
 }
 
-void NRF24::setPayloadSize(uint8_t size) {
+void NRF24::setPayloadSize(uint8_t pipeId, uint8_t size) {
+  switch(pipeId) {
+    case 0: 
+      writeRegister(REG_RX_PW_P0, &size);
+      break;
+    case 1:
+      writeRegister(REG_RX_PW_P1, &size);
+      break;
+    case 2:
+      writeRegister(REG_RX_PW_P2, &size);
+      break;
+    case 3:
+      writeRegister(REG_RX_PW_P3, &size);
+      break;
+    case 4:
+      writeRegister(REG_RX_PW_P4, &size);
+      break;
+    case 5:
+      writeRegister(REG_RX_PW_P5, &size);
+      break;
+    default:
+      break;
+  }
+  
   writeRegister(REG_RX_PW_P0, &size);
+}
+
+uint8_t NRF24::getRxAddress(uint8_t pipeId, uint8_t* rxAddr) {
+  uint8_t addressWidth = getAddressWidths();
+  
+  switch(pipeId) {
+    case 0: 
+      readRegister(REG_RX_ADDR_P0, rxAddr, addressWidth);
+      break;
+    case 1:
+      readRegister(REG_RX_ADDR_P1, rxAddr, addressWidth);
+      break;
+    case 2:
+      readRegister(REG_RX_ADDR_P1, rxAddr, addressWidth);
+      readRegister(REG_RX_ADDR_P2, &rxAddr[addressWidth-1]);
+      break;
+    case 3:
+      readRegister(REG_RX_ADDR_P1, rxAddr);
+      readRegister(REG_RX_ADDR_P3, &rxAddr[addressWidth-1]);
+      break;
+    case 4:
+      readRegister(REG_RX_ADDR_P1, rxAddr);
+      readRegister(REG_RX_ADDR_P4, &rxAddr[addressWidth-1]);
+      break;
+    case 5:
+      readRegister(REG_RX_ADDR_P1, rxAddr);
+      readRegister(REG_RX_ADDR_P5, &rxAddr[addressWidth-1]);
+      break;
+    default:
+      break;
+  }
+}
+
+uint8_t NRF24::getTxAddress(uint8_t* txAddr) {
+  readRegister(REG_TX_ADDR, txAddr, getAddressWidths());
 }
 
 bool NRF24::crcIsEnabled() {
@@ -236,6 +323,71 @@ bool NRF24::isPoweredOn() {
   uint8_t config;
   readRegister(REG_CONFIG, &config);
   return config & PWR_UP;
+}
+
+bool NRF24::dataPipeIsEnabled(uint8_t pipeId) {
+  uint8_t rxaddr;
+  readRegister(REG_EN_RXADDR, &rxaddr);
+  return rxaddr & (1 << pipeId);
+}
+
+uint8_t NRF24::getAddressWidths() {
+  uint8_t setupaw;
+  readRegister(REG_SETUP_AW, &setupaw);
+  return setupaw == 3 ? 5 : setupaw == 2 ? 4 : setupaw == 1 ? 3 : 0;
+}
+
+bool NRF24::dataIsAvailable() {
+  uint8_t status;
+  readRegister(REG_STATUS, &status);
+  return status & RX_DR;
+}
+
+uint8_t NRF24::getDataRate() {
+  uint8_t rfSetup;
+  readRegister(REG_RF_SETUP, &rfSetup);
+  
+  if(rfSetup & RF_DR_LOW)
+    return SPEED_250K;
+  else if(rfSetup & RF_DR_HIGH)
+    return SPEED_2M;
+  else
+    return SPEED_1M;
+}
+
+bool NRF24::isListening() {
+  uint8_t rfConfig;
+  readRegister(REG_CONFIG, &rfConfig);
+  return rfConfig & PRIM_RX;
+}
+
+uint8_t NRF24::getPayloadSize(uint8_t pipeId) {
+  uint8_t size;
+  
+  switch(pipeId) {
+    case 0: 
+      readRegister(REG_RX_PW_P0, &size);
+      break;
+    case 1:
+      readRegister(REG_RX_PW_P1, &size);
+      break;
+    case 2:
+      readRegister(REG_RX_PW_P2, &size);
+      break;
+    case 3:
+      readRegister(REG_RX_PW_P3, &size);
+      break;
+    case 4:
+      readRegister(REG_RX_PW_P4, &size);
+      break;
+    case 5:
+      readRegister(REG_RX_PW_P5, &size);
+      break;
+    default:
+      break;
+  }
+  
+  return size;
 }
 
 void NRF24::init(uint8_t channel) {

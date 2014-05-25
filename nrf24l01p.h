@@ -86,13 +86,18 @@
 #define ERX_P0                   0x01
 
 // RF_SETUP
-#define CONT_WAVE                0x80      
-#define RF_DR_LOW                0x40
-#define PLL_LOCK                 0x20
-#define RF_DR_HIGH               0x10
+#define CONT_WAVE                0x40      
+#define RF_DR_LOW                0x20
+#define PLL_LOCK                 0x10
+#define RF_DR_HIGH               0x08
 enum {RF_PWR_0, RF_PWR_1, RF_PWR_2, RF_PWR_3};
 enum {AW_ILLEGAL, AW_3BYTES, AW_4BYTES, AW_5BYTES};
 
+#define RX_DR                    0x40 // 6
+#define TX_DS                    0x20 // 5
+#define MAX_RT                   0x10 // 4
+//      RX_P_NO                       // 1..3
+#define TX_FULL                  0x01 // 0                    
 
 
 // TODO: add rest?
@@ -100,7 +105,7 @@ enum {AW_ILLEGAL, AW_3BYTES, AW_4BYTES, AW_5BYTES};
 
 
 // Data Rates
-enum { SPEED_250K, SPEED_1M, SPEED_2M };
+enum { SPEED_250K = 0, SPEED_1M = 1, SPEED_2M = 2 };
 
 class NRF24 {
   public:
@@ -114,11 +119,10 @@ class NRF24 {
     void setRFChannel(uint8_t channel);                 // RF_CH
     void setDataRate(uint8_t dataRate);                 // RF_SETUP
     void setXmitPower(uint8_t powerLevel);              // RF_SETUP
-    void setRxAddr(uint8_t* addr);
-    void setTxAddr(uint8_t* addr);                      // RX_ADDR_P0 (TODO: support all pipes. only pipe 0 is supported yet.)
-    void setPayloadSize(uint8_t size);                  // RX_PW_P0
-    void setRxAdress(uint8_t* addr, int adressLen);
-    
+    void setRxAddress(uint8_t* addr);
+    void setTxAddress(uint8_t* addr);                   // RX_ADDR_P(N)
+    void setPayloadSize(uint8_t pipeId, uint8_t size);  // RX_PW_P0
+    void setRxAddress(uint8_t pipeId, uint8_t* rxAddr); // RX_ADDR_P(N)
     
     // register
     uint8_t readRegister(uint8_t reg, uint8_t* dataIn);
@@ -145,8 +149,15 @@ class NRF24 {
     uint8_t crcGetEncodingScheme();
     bool isPoweredOn();
     bool shockburstIsEnabled(uint8_t pipeId);
-  
+    bool dataPipeIsEnabled(uint8_t pipeId);   // EN_RXADDR
+    uint8_t getAddressWidths();
+    uint8_t getRxAddress(uint8_t pipeId, uint8_t* rxAddr);
+    uint8_t getTxAddress(uint8_t* txAddr);
     uint8_t getRFChannel(); // RF_CH
+    bool dataIsAvailable();
+    uint8_t getDataRate();
+    bool isListening();
+    uint8_t getPayloadSize(uint8_t pipeId);
 
     
 private:
