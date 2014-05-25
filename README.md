@@ -14,3 +14,4 @@ Todo:
 - Interrupt support
 - Carrier Detect
 - (Maybe some fancy stuff with the different pipes)
+- Adding a hardware abstraction layer file for better portability
