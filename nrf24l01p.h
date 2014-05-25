@@ -1,6 +1,6 @@
 #include "Energia.h"
 
-//#define NRF24_DEBUG 1
+#define NRF24_DEBUG 1
 
 #ifdef NRF24_DEBUG 
 #define NRFDBG(functionName) Serial.println(functionName);
@@ -127,9 +127,11 @@ class NRF24 {
     // register
     uint8_t readRegister(uint8_t reg, uint8_t* dataIn);
     uint8_t readRegister(uint8_t reg, uint8_t* dataIn, uint8_t len);
-    uint8_t writeRegister(uint8_t reg, uint8_t* dataOut);
-    uint8_t writeRegister(uint8_t reg, uint8_t* dataOut, uint8_t len);
+    void writeRegister(uint8_t reg, uint8_t* dataOut);
+    void writeRegister(uint8_t reg, uint8_t* dataOut, uint8_t len);
     
+    // payload
+    uint8_t readPayload(uint8_t* payload);
     
     // TODO: SETUP_RETR
 
@@ -158,7 +160,10 @@ class NRF24 {
     uint8_t getDataRate();
     bool isListening();
     uint8_t getPayloadSize(uint8_t pipeId);
+    uint8_t getPayloadSizeRxFifoTop();
+    uint32_t recvPacket(uint8_t* packet);
 
+    void flushRxFifo();
     
 private:
     void transferSync(uint8_t *dataout,uint8_t *datain,uint8_t len);
@@ -171,4 +176,6 @@ private:
     void setMask(uint8_t* var, uint8_t mask) { *var |= mask; }
     void resetMask(uint8_t* var, uint8_t mask) { *var &= ~(mask); }
     void setMaskOfRegisterIfTrue(uint8_t reg, uint8_t mask, bool set);
+    
+    void clearRxInterrupt();
 };

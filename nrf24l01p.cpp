@@ -1,38 +1,6 @@
 #include "SPI.h"
 #include "nrf24l01p.h"
 
-// TODO: 
-// - sleep mode (PWR_BIT setzen, CE aus etc...)
-// 
-
-
-
-/*
-//Read from or write to register from the NRF24L01+:
-unsigned int NRF24::readRegister(byte reg) {
- // digitalWrite(CHIP_SELECT_PIN, LOW); // take the chip select low to select the device:
-  SPI.transfer(CMD_R_REGISTER | reg & 0x1F); // drop status register
-  SPI.transfer(0x00);
-  
-  unsigned int result = SPI.transfer(CMD_R_REGISTER | reg & 0x1F); 
-//  digitalWrite(CHIP_SELECT_PIN, HIGH); // take the chip select high to de-select:
-  
-  return result;
-}
-*/
-
-/*
-// Sends a write command to NF24L01+
-void NRF24::writeRegister(byte reg, byte value) {  
-  digitalWrite(CHIP_SELECT_PIN, LOW); // take the chip select low to select the device:
-  
-  SPI.transfer(CMD_W_REGISTER | (reg & 0x1F));
-  SPI.transfer(value);
-  
-  digitalWrite(CHIP_SELECT_PIN, HIGH); // take the chip select high to de-select:
-}
-*/
-
 void NRF24::csnLow() {
   digitalWrite(CHIP_SELECT_PIN, LOW);
 }
@@ -58,9 +26,7 @@ uint8_t NRF24::readRegister(uint8_t reg, uint8_t* dataIn) {
   readRegister(reg, dataIn, 1);
 }
 
-uint8_t NRF24::writeRegister(uint8_t reg, uint8_t* dataOut, uint8_t len) {
-  NRFDBG("NRF24::writeRegister(uint8_t reg, uint8_t* dataOut, uint8_t len)");
-  
+void NRF24::writeRegister(uint8_t reg, uint8_t* dataOut, uint8_t len) {  
   csnLow();
       
   uint8_t status = SPI.transfer(CMD_W_REGISTER  | (0x1F & reg));
@@ -68,14 +34,28 @@ uint8_t NRF24::writeRegister(uint8_t reg, uint8_t* dataOut, uint8_t len) {
     SPI.transfer(dataOut[i]);
   
   csnHigh();
-  
-  return 0; //status;
 }
 
-uint8_t NRF24::writeRegister(uint8_t reg, uint8_t* dataOut) {
-  NRFDBG("NRF24::writeRegister(uint8_t reg, uint8_t* dataOut)");
-  
+void NRF24::writeRegister(uint8_t reg, uint8_t* dataOut) {
   writeRegister(reg, dataOut, 1);
+}
+
+uint8_t NRF24::readPayload(uint8_t* payload) {
+  uint8_t payloadSize = getPayloadSizeRxFifoTop();
+  
+  if(payloadSize > 32) 
+    flushRxFifo(); // datasheet page 51 says, this is necessary
+
+  csnLow();
+  
+  SPI.transfer(CMD_R_RX_PAYLOAD);
+  for(int i = 0; i < payloadSize; i++)
+    payload[i] = SPI.transfer(0x00);
+    
+  csnHigh();
+  clearRxInterrupt();
+  
+  return payloadSize;
 }
 
 void NRF24::setMaskOfRegisterIfTrue(uint8_t reg, uint8_t mask, bool set) {
@@ -388,6 +368,39 @@ uint8_t NRF24::getPayloadSize(uint8_t pipeId) {
   }
   
   return size;
+}
+
+uint8_t NRF24::getPayloadSizeRxFifoTop() {
+  uint8_t size;
+  
+  csnLow();
+  
+  SPI.transfer(CMD_R_RX_PL_WID);
+  size = SPI.transfer(0x00);
+  
+  csnHigh();
+  
+  return size;
+}
+
+uint32_t NRF24::recvPacket(uint8_t* packet) {
+  if(isPoweredOn() && dataIsAvailable()) {
+    return readPayload(packet);   
+  }
+  else
+    return 0;
+}
+
+void NRF24::clearRxInterrupt() {
+  uint8_t rfStatus;
+  readRegister(REG_STATUS, &rfStatus);
+  setMask(&rfStatus, RX_DR);
+  writeRegister(REG_STATUS, &rfStatus);
+}
+
+void NRF24::flushRxFifo() {
+  NRFDBG("DBG: RX FIFO FLUSHED!")
+  SPI.transfer(CMD_FLUSH_RX);
 }
 
 void NRF24::init(uint8_t channel) {

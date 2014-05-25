@@ -21,7 +21,7 @@ by coon
 #include "nrf24l01p.h"
 
 NRF24 radio;
-
+uint8_t recvBuffer[32];
 
 void setup()
 {
@@ -34,15 +34,15 @@ void setup()
 
 void printFullConfig() {
   radio.enableCRC(0);
-  radio.enableShockburst(3, false);
-  radio.enableDataPipe(5, true);
+  radio.enableShockburst(0, false);
+  radio.enableDataPipe(0, true);
   radio.setAddressWidth(5);
   radio.powerUp(true);
   radio.listenMode(true);
 
   uint8_t rxaddr[] = {0x01, 0x02, 0x03, 0x02, 0x01 };
   uint8_t txaddr[] = {0x01, 0x02, 0x03, 0x02, 0x01 };
-  radio.setRxAddress(1, rxaddr);
+  radio.setRxAddress(0, rxaddr);
   radio.setTxAddress(txaddr);
   radio.setDataRate(SPEED_2M);
   radio.setPayloadSize(0, 16);
@@ -109,7 +109,15 @@ void loop()
  
   
   while(true) {
-   
+    if(radio.dataIsAvailable()) {
+      uint32_t size = radio.recvPacket(recvBuffer);
+      
+      Serial.print("Received ("); Serial.print(size); + Serial.print("): ");
+      for(int i = 0; i < size; i++) {
+        Serial.print((char)recvBuffer[i]);
+      }
+      Serial.println("");
+    }
   }
 }
 
