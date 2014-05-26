@@ -107,6 +107,14 @@ enum {AW_ILLEGAL, AW_3BYTES, AW_4BYTES, AW_5BYTES};
 // Data Rates
 enum { SPEED_250K = 0, SPEED_1M = 1, SPEED_2M = 2 };
 
+
+// custom errors
+#define NRF_OK 0;
+#define NRF_DEVICE_NOT_POWERED_ON -1
+#define NRF_NO_DATA_AVAILABLE -2
+#define NRF_INVALID_PAYLOAD_SIZE -3
+
+
 class NRF24 {
   public:
     void init(uint8_t channel);
@@ -123,15 +131,13 @@ class NRF24 {
     void setTxAddress(uint8_t* addr);                   // RX_ADDR_P(N)
     void setPayloadSize(uint8_t pipeId, uint8_t size);  // RX_PW_P0
     void setRxAddress(uint8_t pipeId, uint8_t* rxAddr); // RX_ADDR_P(N)
+    int8_t sendPacket(uint8_t* packet, int8_t payloadSize, bool listenAfterSend = true); // W_TX_PAYLOAD
     
     // register
     uint8_t readRegister(uint8_t reg, uint8_t* dataIn);
     uint8_t readRegister(uint8_t reg, uint8_t* dataIn, uint8_t len);
     void writeRegister(uint8_t reg, uint8_t* dataOut);
     void writeRegister(uint8_t reg, uint8_t* dataOut, uint8_t len);
-    
-    // payload
-    uint8_t readPayload(uint8_t* payload);
     
     // TODO: SETUP_RETR
 
@@ -165,17 +171,22 @@ class NRF24 {
 
     void flushRxFifo();
     
-private:
-    void transferSync(uint8_t *dataout,uint8_t *datain,uint8_t len);
-    void transmitSync(uint8_t *dataout,uint8_t len);
-    
+  private:
+    bool isListening_;
+
     void csnLow();
     void csnHigh();
+    void ceLow();
+    void ceHigh();
+    void clearRxInterrupt();
+
+    // payload
+    int8_t readPayload(uint8_t* payload);
+    void writePayload(uint8_t* payload, uint8_t payloadSize);
     
     // binary helpers
     void setMask(uint8_t* var, uint8_t mask) { *var |= mask; }
     void resetMask(uint8_t* var, uint8_t mask) { *var &= ~(mask); }
     void setMaskOfRegisterIfTrue(uint8_t reg, uint8_t mask, bool set);
-    
-    void clearRxInterrupt();
+
 };

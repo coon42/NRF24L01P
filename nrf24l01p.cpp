@@ -9,6 +9,14 @@ void NRF24::csnHigh() {
   digitalWrite(CHIP_SELECT_PIN, HIGH);
 }
 
+void NRF24::ceLow() {
+  digitalWrite(CHIP_ENABLE_PIN, LOW);
+}
+
+void NRF24::ceHigh() {
+  digitalWrite(CHIP_ENABLE_PIN, HIGH);
+}
+
 
 uint8_t NRF24::readRegister(uint8_t reg, uint8_t* dataIn, uint8_t len) { 
   csnLow();
@@ -40,7 +48,7 @@ void NRF24::writeRegister(uint8_t reg, uint8_t* dataOut) {
   writeRegister(reg, dataOut, 1);
 }
 
-uint8_t NRF24::readPayload(uint8_t* payload) {
+int8_t NRF24::readPayload(uint8_t* payload) {
   uint8_t payloadSize = getPayloadSizeRxFifoTop();
   
   if(payloadSize > 32) 
@@ -56,6 +64,18 @@ uint8_t NRF24::readPayload(uint8_t* payload) {
   clearRxInterrupt();
   
   return payloadSize;
+}
+
+void NRF24::writePayload(uint8_t* payload, uint8_t payloadSize) {    
+  csnLow();
+  SPI.transfer(CMD_W_TX_PAYLOAD);
+  for(int i = 0; i < payloadSize; i++)
+    SPI.transfer(payload[i]);
+  csnHigh();
+  
+  ceHigh();
+  delayMicroseconds(20); // delay must be at least for 10 microseconds so 20 microseconds should be fine.
+  ceLow();
 }
 
 void NRF24::setMaskOfRegisterIfTrue(uint8_t reg, uint8_t mask, bool set) {
@@ -109,6 +129,7 @@ void NRF24::powerUp(bool enable) {
 void NRF24::listenMode(bool enable) {
   setMaskOfRegisterIfTrue(REG_CONFIG, PRIM_RX, enable);
   digitalWrite(CHIP_ENABLE_PIN, enable ? HIGH : LOW);
+  isListening_ = enable;
 }
 
 
@@ -336,9 +357,13 @@ uint8_t NRF24::getDataRate() {
 }
 
 bool NRF24::isListening() {
+  /*
   uint8_t rfConfig;
   readRegister(REG_CONFIG, &rfConfig);
   return rfConfig & PRIM_RX;
+  */
+  
+  return isListening_;
 }
 
 uint8_t NRF24::getPayloadSize(uint8_t pipeId) {
@@ -384,11 +409,13 @@ uint8_t NRF24::getPayloadSizeRxFifoTop() {
 }
 
 uint32_t NRF24::recvPacket(uint8_t* packet) {
-  if(isPoweredOn() && dataIsAvailable()) {
-    return readPayload(packet);   
-  }
-  else
-    return 0;
+  if(!isPoweredOn())
+    return NRF_DEVICE_NOT_POWERED_ON;
+  
+  if(!dataIsAvailable())
+    return NRF_NO_DATA_AVAILABLE;
+  
+  return readPayload(packet);
 }
 
 void NRF24::clearRxInterrupt() {
@@ -403,12 +430,37 @@ void NRF24::flushRxFifo() {
   SPI.transfer(CMD_FLUSH_RX);
 }
 
+int8_t NRF24::sendPacket(uint8_t* packet, int8_t payloadSize, bool listenAfterSend) {
+  if(!isPoweredOn())
+    return NRF_DEVICE_NOT_POWERED_ON;
+    
+  if(payloadSize < 1 || payloadSize > 32)
+    return NRF_INVALID_PAYLOAD_SIZE;
+  
+  if(isListening_) {
+    delayMicroseconds(150);
+    listenMode(false);
+  }
+  
+  writePayload(packet, payloadSize);
+   
+  if(listenAfterSend) {
+    // delay transition between rx and tx must be at least 130us
+    // else the chip meight not receive anymore.
+    delayMicroseconds(150); 
+    listenMode(true);
+  }
+    
+  return NRF_OK;
+}
+
 void NRF24::init(uint8_t channel) {
   SPI.begin();
   pinMode(CHIP_ENABLE_PIN, OUTPUT);
   pinMode(CHIP_SELECT_PIN, OUTPUT);
   digitalWrite(CHIP_ENABLE_PIN, LOW);
   digitalWrite(CHIP_SELECT_PIN, HIGH);
-  
-  setRFChannel(channel);
+
+  setRFChannel(channel);  
+  listenMode(true);
 }

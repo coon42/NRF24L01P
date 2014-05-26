@@ -14,7 +14,7 @@ CSN -> PE_1
 
 
 created 09 May 2014
-modified 24 May 2014
+modified 26 May 2014
 by coon
 */
 
@@ -25,14 +25,9 @@ uint8_t recvBuffer[32];
 
 void setup()
 {
-   Serial.begin(9600);
-   radio.init(81);
-   
-   Serial.println("NRF24L01+ Library");
-   Serial.println("-----------------");
-}
+  Serial.begin(9600);
+  radio.init(81);
 
-void printFullConfig() {
   radio.enableCRC(0);
   radio.enableShockburst(0, false);
   radio.enableDataPipe(0, true);
@@ -46,7 +41,12 @@ void printFullConfig() {
   radio.setTxAddress(txaddr);
   radio.setDataRate(SPEED_2M);
   radio.setPayloadSize(0, 16);
-  
+   
+  Serial.println("NRF24L01+ Library");
+  Serial.println("-----------------");
+}
+
+void printFullConfig() {  
   Serial.println("NRF24 Configuration:");
   Serial.print("Mode: "); Serial.println(radio.isListening() ? "Listening" : "Transmitting");
   Serial.print("RF Channel: "); Serial.println(radio.getRFChannel());
@@ -106,7 +106,6 @@ void printFullConfig() {
 void loop()
 {
   printFullConfig();
- 
   
   while(true) {
     if(radio.dataIsAvailable()) {
@@ -114,13 +113,11 @@ void loop()
       
       Serial.print("Received ("); Serial.print(size); + Serial.print("): ");
       for(int i = 0; i < size; i++) {
-        Serial.print((char)recvBuffer[i]);
+        char c = (char)recvBuffer[i];
+        Serial.print(c >= 0x20 && c < 0x7F ? c : '.');
       }
       Serial.println("");
     }
   }
 }
-
-
-
 
