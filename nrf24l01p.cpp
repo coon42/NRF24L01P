@@ -72,10 +72,12 @@ void NRF24::writePayload(uint8_t* payload, uint8_t payloadSize) {
   for(int i = 0; i < payloadSize; i++)
     SPI.transfer(payload[i]);
   csnHigh();
-  
+
   ceHigh();
-  delayMicroseconds(20); // delay must be at least for 10 microseconds so 20 microseconds should be fine.
-  ceLow();
+  //delayMicroseconds(20); // Minimum CE high
+  //ceLow();
+  //delayMicroseconds(10); // Delay from CE positive edge to CSN low (4us min)
+  
 }
 
 void NRF24::setMaskOfRegisterIfTrue(uint8_t reg, uint8_t mask, bool set) {
@@ -430,6 +432,11 @@ void NRF24::flushRxFifo() {
   SPI.transfer(CMD_FLUSH_RX);
 }
 
+void NRF24::flushTxFifo() {
+  NRFDBG("DBG: TX FIFO FLUSHED!")
+  SPI.transfer(CMD_FLUSH_TX);
+}
+
 int8_t NRF24::sendPacket(uint8_t* packet, int8_t payloadSize, bool listenAfterSend) {
   if(!isPoweredOn())
     return NRF_DEVICE_NOT_POWERED_ON;
@@ -438,29 +445,32 @@ int8_t NRF24::sendPacket(uint8_t* packet, int8_t payloadSize, bool listenAfterSe
     return NRF_INVALID_PAYLOAD_SIZE;
   
   if(isListening_) {
-    delayMicroseconds(150);
+    delayMicroseconds(200);
     listenMode(false);
   }
   
   writePayload(packet, payloadSize);
-   
+  
   if(listenAfterSend) {
     // delay transition between rx and tx must be at least 130us
     // else the chip meight not receive anymore.
-    delayMicroseconds(150); 
+    delayMicroseconds(200); 
     listenMode(true);
   }
-    
+  
   return NRF_OK;
 }
 
 void NRF24::init(uint8_t channel) {
   SPI.begin();
+  
   pinMode(CHIP_ENABLE_PIN, OUTPUT);
   pinMode(CHIP_SELECT_PIN, OUTPUT);
   digitalWrite(CHIP_ENABLE_PIN, LOW);
   digitalWrite(CHIP_SELECT_PIN, HIGH);
 
-  setRFChannel(channel);  
+  flushTxFifo();  
+  flushRxFifo();
+  setRFChannel(channel);
   listenMode(true);
 }

@@ -19,13 +19,27 @@ by coon
 */
 
 #include "nrf24l01p.h"
+#include "crc.h"
+#include <Ethernet.h>
+#include <EthernetUdp.h>
+
+byte mac[] = {0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED};
+IPAddress ip(192,168,0,142);
+unsigned int localPort = 2342;
+uint8_t packetBuffer[UDP_TX_PACKET_MAX_SIZE];
+EthernetUDP Udp;
 
 NRF24 radio;
-uint8_t recvBuffer[32];
+#define NRF_SIZE 32
+uint8_t recvBuffer[NRF_SIZE];
 
 void setup()
 {
-  Serial.begin(9600);
+  pinMode(USR_SW2, INPUT_PULLUP);
+  
+  Ethernet.begin(mac, ip);
+  Udp.begin(localPort);
+  Serial.begin(115200);
   radio.init(81);
 
   radio.enableCRC(0);
@@ -33,14 +47,14 @@ void setup()
   radio.enableDataPipe(0, true);
   radio.setAddressWidth(5);
   radio.powerUp(true);
-  radio.listenMode(true);
+  radio.listenMode(false);
 
   uint8_t rxaddr[] = {0x01, 0x02, 0x03, 0x02, 0x01 };
   uint8_t txaddr[] = {0x01, 0x02, 0x03, 0x02, 0x01 };
   radio.setRxAddress(0, rxaddr);
   radio.setTxAddress(txaddr);
   radio.setDataRate(SPEED_2M);
-  radio.setPayloadSize(0, 16);
+  radio.setPayloadSize(0, NRF_SIZE);
    
   Serial.println("NRF24L01+ Library");
   Serial.println("-----------------");
@@ -103,21 +117,25 @@ void printFullConfig() {
   Serial.print("  RX_FIFO: "); Serial.println(radio.dataIsAvailable() ? "Data Available" : "Empty");
 }
 
+uint32_t count = 0;
+
+uint32_t sentBytes = 0;
+uint32_t lastMicros = 0;
+
 void loop()
 {
   printFullConfig();
   
-  while(true) {
-    if(radio.dataIsAvailable()) {
-      uint32_t size = radio.recvPacket(recvBuffer);
-      
-      Serial.print("Received ("); Serial.print(size); + Serial.print("): ");
-      for(int i = 0; i < size; i++) {
-        char c = (char)recvBuffer[i];
-        Serial.print(c >= 0x20 && c < 0x7F ? c : '.');
-      }
-      Serial.println("");
+  while(true) {   
+    if(micros() - lastMicros >= 1000000) {
+      Serial.print("Speed: "); Serial.print((sentBytes / passedMicros)); Serial.println("KB/s");
+      lastMicros = micros();
+      sentBytes = 0;
     }
+    
+    *((uint32_t*)packetBuffer) = count++;
+    radio.sendPacket(packetBuffer, NRF_SIZE, false);
+    sentBytes += NRF_SIZE;
   }
 }
 

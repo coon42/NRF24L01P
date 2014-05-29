@@ -170,6 +170,7 @@ class NRF24 {
     uint32_t recvPacket(uint8_t* packet);
 
     void flushRxFifo();
+    void flushTxFifo();
     
   private:
     bool isListening_;
