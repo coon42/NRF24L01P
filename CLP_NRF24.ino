@@ -132,6 +132,22 @@ void loop()
 {
   printFullConfig();
   
+  radio.listenMode(true);
+  Serial.print("CE: "); Serial.println(digitalRead(CHIP_ENABLE_PIN));
+  Serial.print("Listening: "); Serial.println(radio.isListening());
+  
+  
+  while(true) {
+    int32_t size = radio.recvPacket(recvBuffer);
+    
+    if(size != NRF_NO_DATA_AVAILABLE)
+      for(int i = 0; i < size; i++) {
+        Serial.println("Data: "); Serial.println(recvBuffer[i], HEX); Serial.println(", ");
+      }
+  }
+  
+    
+ /*
   while(true) {
     passedMicros = micros() - lastMicros;
     
@@ -143,11 +159,10 @@ void loop()
         
     *((uint32_t*)packetBuffer) = count++;
     while(radio.txFifoIsFull());
-    
     radio.sendPacket(packetBuffer, NRF_SIZE, false);
-    Serial.println("sende...");
     
     sentBytes += NRF_SIZE;
   }
+ */ 
 }
 

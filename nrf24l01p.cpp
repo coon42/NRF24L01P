@@ -44,7 +44,7 @@ void NRF24::writeRegister(uint8_t reg, uint8_t* dataOut) {
 }
 
 int8_t NRF24::readPayload(uint8_t* payload) {
-  uint8_t payloadSize = 32; //getPayloadSizeRxFifoTop();
+  uint8_t payloadSize = getPayloadSizeRxFifoTop();
   
   if(payloadSize > 32) 
     flushRxFifo(); // datasheet page 51 says, this is necessary
@@ -54,7 +54,7 @@ int8_t NRF24::readPayload(uint8_t* payload) {
   for(int i = 0; i < payloadSize; i++)
     payload[i] = SPI.transfer(0x00);  
   csnHigh();
-  // clearRxInterrupt();
+  clearRxInterrupt();
   
   return payloadSize;
 }
@@ -119,6 +119,7 @@ void NRF24::listenMode(bool enable) {
   // delay transition between rx and tx must be at least 130us
   // else the chip meight crash.
   delayMicroseconds(200); 
+  setMaskOfRegisterIfTrue(REG_CONFIG, PRIM_RX, enable);  
   digitalWrite(CHIP_ENABLE_PIN, enable ? HIGH : LOW);
 }
 
@@ -422,17 +423,15 @@ int8_t NRF24::sendPacket(uint8_t* packet, int8_t payloadSize, bool listenAfterSe
     listenMode(false);
   
   writePayload(packet, payloadSize);
-  
+
   // To initially start a transmission, it is important that something in the TX FIFO
   // before pulling the chip enable pin high. If chip enable is already set when the payload is empty, 
-  // the transmission will NOT be initiated before ce got pulled low and high again!
-  
-  /*
+  // the transmission will NOT be initiated before ce got pulled low and high again!   
   if(!digitalRead(CHIP_ENABLE_PIN)) {
     ceHigh();
     delayMicroseconds(10); // Delay from CE positive edge to CSN low
   }
-  */
+  
   
   if(listenAfterSend)
     listenMode(true);
