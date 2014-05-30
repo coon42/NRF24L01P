@@ -135,8 +135,7 @@ void loop()
   while(true) {  
     passedMicros = micros() - lastMicros;
     
-    if(radio.getRxPipe() != RX_P_NO_FIFO_EMPTY) {
-      radio.recvPacket(recvBuffer);
+    if(radio.recvPacket(recvBuffer) != NRF_NO_DATA_AVAILABLE) {
       recvBytes += NRF_SIZE;
       remoteCount = *(uint32_t*)recvBuffer;
       

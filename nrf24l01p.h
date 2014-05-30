@@ -13,6 +13,13 @@
 #define CHIP_SELECT_PIN PE_1 // CSN
 
 
+// custom errors (TODO: make a higher NRF layer?) 
+#define NRF_OK 0;
+#define NRF_DEVICE_NOT_POWERED_ON -1
+#define NRF_NO_DATA_AVAILABLE -2
+#define NRF_INVALID_PAYLOAD_SIZE -3
+
+
 // Commands
 #define CMD_R_REGISTER           0x00 // Mask 
 #define CMD_W_REGISTER           0x20 // Mask 
@@ -170,17 +177,8 @@ enum{RX_P_NO_FIFO_EMPTY = 0x07};
 #define EN_ACK_PAY 0x02
 #define EN_DYN_ACK 0x01
 
-
 // Data Rates
 enum { SPEED_250K = 0, SPEED_1M = 1, SPEED_2M = 2 };
-
-
-// custom errors
-#define NRF_OK 0;
-#define NRF_DEVICE_NOT_POWERED_ON -1
-#define NRF_NO_DATA_AVAILABLE -2
-#define NRF_INVALID_PAYLOAD_SIZE -3
-
 
 class NRF24 {
   public:
@@ -241,8 +239,6 @@ class NRF24 {
     void flushTxFifo();
     
   private:
-    bool isListening_;
-
     void csnLow();
     void csnHigh();
     void ceLow();

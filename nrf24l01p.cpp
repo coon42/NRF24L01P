@@ -124,7 +124,6 @@ void NRF24::powerUp(bool enable) {
 void NRF24::listenMode(bool enable) {
   setMaskOfRegisterIfTrue(REG_CONFIG, PRIM_RX, enable);
   digitalWrite(CHIP_ENABLE_PIN, enable ? HIGH : LOW);
-  isListening_ = enable;
 }
 
 
@@ -339,13 +338,9 @@ uint8_t NRF24::getDataRate() {
 }
 
 bool NRF24::isListening() {
-  /*
   uint8_t rfConfig;
   readRegister(REG_CONFIG, &rfConfig);
   return rfConfig & PRIM_RX;
-  */
-  
-  return isListening_;
 }
 
 uint8_t NRF24::getPayloadSize(uint8_t pipeId) {
@@ -391,11 +386,12 @@ uint8_t NRF24::getPayloadSizeRxFifoTop() {
 }
 
 uint32_t NRF24::recvPacket(uint8_t* packet) {
-  //if(!isPoweredOn())
-  //  return NRF_DEVICE_NOT_POWERED_ON;
+  if(!isPoweredOn())
+    return NRF_DEVICE_NOT_POWERED_ON;
   
-  //if(!dataIsAvailable())
-  //  return NRF_NO_DATA_AVAILABLE;
+  uint8_t pipeId = getRxPipe();
+  if(pipeId == RX_P_NO_FIFO_EMPTY)
+    return NRF_NO_DATA_AVAILABLE;
   
   return readPayload(packet);
 }
@@ -424,7 +420,7 @@ int8_t NRF24::sendPacket(uint8_t* packet, int8_t payloadSize, bool listenAfterSe
   if(payloadSize < 1 || payloadSize > 32)
     return NRF_INVALID_PAYLOAD_SIZE;
   
-  if(isListening_) {
+  if(isListening()) {
     delayMicroseconds(200);
     listenMode(false);
   }
