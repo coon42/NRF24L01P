@@ -17,20 +17,15 @@ void NRF24::ceHigh() {
   digitalWrite(CHIP_ENABLE_PIN, HIGH);
 }
 
-
-uint8_t NRF24::readRegister(uint8_t reg, uint8_t* dataIn, uint8_t len) { 
+void NRF24::readRegister(uint8_t reg, uint8_t* dataIn, uint8_t len) { 
   csnLow();
-  
-  uint8_t status = SPI.transfer(CMD_R_REGISTER | (0x1F & reg));
+  SPI.transfer(CMD_R_REGISTER | (0x1F & reg));
   for(int i = 0; i < len; i++)
     dataIn[i] = SPI.transfer(0x00);
-    
   csnHigh();
-  
-  return status;
 }
 
-uint8_t NRF24::readRegister(uint8_t reg, uint8_t* dataIn) { 
+void NRF24::readRegister(uint8_t reg, uint8_t* dataIn) { 
   readRegister(reg, dataIn, 1);
 }
 
@@ -49,19 +44,17 @@ void NRF24::writeRegister(uint8_t reg, uint8_t* dataOut) {
 }
 
 int8_t NRF24::readPayload(uint8_t* payload) {
-  uint8_t payloadSize = getPayloadSizeRxFifoTop();
+  uint8_t payloadSize = 32; //getPayloadSizeRxFifoTop();
   
   if(payloadSize > 32) 
     flushRxFifo(); // datasheet page 51 says, this is necessary
 
   csnLow();
-  
   SPI.transfer(CMD_R_RX_PAYLOAD);
   for(int i = 0; i < payloadSize; i++)
-    payload[i] = SPI.transfer(0x00);
-    
+    payload[i] = SPI.transfer(0x00);  
   csnHigh();
-  clearRxInterrupt();
+  // clearRxInterrupt();
   
   return payloadSize;
 }
@@ -209,7 +202,7 @@ void NRF24::setXmitPower(uint8_t powerLevel) {
   writeRegister(REG_RF_SETUP, &rfSetup);
 }
 
-
+// TODO: refactor for subaddresses?
 void NRF24::setRxAddress(uint8_t pipeId, uint8_t* rxAddr) {
   uint8_t addressWidth = getAddressWidths();
   
@@ -244,26 +237,13 @@ void NRF24::setTxAddress(uint8_t* addr) {
 
 void NRF24::setPayloadSize(uint8_t pipeId, uint8_t size) {
   switch(pipeId) {
-    case 0: 
-      writeRegister(REG_RX_PW_P0, &size);
-      break;
-    case 1:
-      writeRegister(REG_RX_PW_P1, &size);
-      break;
-    case 2:
-      writeRegister(REG_RX_PW_P2, &size);
-      break;
-    case 3:
-      writeRegister(REG_RX_PW_P3, &size);
-      break;
-    case 4:
-      writeRegister(REG_RX_PW_P4, &size);
-      break;
-    case 5:
-      writeRegister(REG_RX_PW_P5, &size);
-      break;
-    default:
-      break;
+    case 0: writeRegister(REG_RX_PW_P0, &size); break;
+    case 1: writeRegister(REG_RX_PW_P1, &size); break;
+    case 2: writeRegister(REG_RX_PW_P2, &size); break;
+    case 3: writeRegister(REG_RX_PW_P3, &size); break;
+    case 4: writeRegister(REG_RX_PW_P4, &size); break;
+    case 5: writeRegister(REG_RX_PW_P5, &size); break;
+    default: break;
   }
   
   writeRegister(REG_RX_PW_P0, &size);
@@ -340,10 +320,10 @@ uint8_t NRF24::getAddressWidths() {
   return setupaw == 3 ? 5 : setupaw == 2 ? 4 : setupaw == 1 ? 3 : 0;
 }
 
-bool NRF24::dataIsAvailable() {
+uint8_t NRF24::getRxPipe() {
   uint8_t status;
   readRegister(REG_STATUS, &status);
-  return status & RX_DR;
+  return RX_P_NO(status);
 }
 
 uint8_t NRF24::getDataRate() {
@@ -411,11 +391,11 @@ uint8_t NRF24::getPayloadSizeRxFifoTop() {
 }
 
 uint32_t NRF24::recvPacket(uint8_t* packet) {
-  if(!isPoweredOn())
-    return NRF_DEVICE_NOT_POWERED_ON;
+  //if(!isPoweredOn())
+  //  return NRF_DEVICE_NOT_POWERED_ON;
   
-  if(!dataIsAvailable())
-    return NRF_NO_DATA_AVAILABLE;
+  //if(!dataIsAvailable())
+  //  return NRF_NO_DATA_AVAILABLE;
   
   return readPayload(packet);
 }

@@ -12,14 +12,12 @@ Configurable:
 CE -> PE_0
 CSN -> PE_1
 
-
 created 09 May 2014
-modified 26 May 2014
+modified 30 May 2014
 by coon
 */
 
 #include "nrf24l01p.h"
-#include "crc.h"
 #include <Ethernet.h>
 #include <EthernetUdp.h>
 
@@ -34,9 +32,7 @@ NRF24 radio;
 uint8_t recvBuffer[NRF_SIZE];
 
 void setup()
-{
-  pinMode(USR_SW2, INPUT_PULLUP);
-  
+{ 
   Ethernet.begin(mac, ip);
   Udp.begin(localPort);
   Serial.begin(115200);
@@ -44,10 +40,10 @@ void setup()
 
   radio.enableCRC(0);
   radio.enableShockburst(0, false);
-  radio.enableDataPipe(0, true);
+  radio.enableDataPipe(1, true);
   radio.setAddressWidth(5);
   radio.powerUp(true);
-  radio.listenMode(false);
+  radio.listenMode(true);
 
   uint8_t rxaddr[] = {0x01, 0x02, 0x03, 0x02, 0x01 };
   uint8_t txaddr[] = {0x01, 0x02, 0x03, 0x02, 0x01 };
@@ -114,28 +110,58 @@ void printFullConfig() {
   }
   
   Serial.println("Status: ");
-  Serial.print("  RX_FIFO: "); Serial.println(radio.dataIsAvailable() ? "Data Available" : "Empty");
+  uint32_t rxPipe = radio.getRxPipe();
+  Serial.print("  RX_FIFO: ");
+  if(rxPipe != RX_P_NO_FIFO_EMPTY) {
+    Serial.print("Data available on pipe: "); Serial.println(rxPipe);  
+  }
+  else
+    Serial.println("Empty");
 }
 
-uint32_t count = 0;
-
-uint32_t sentBytes = 0;
+uint32_t recvBytes = 0;
 uint32_t lastMicros = 0;
+uint32_t passedMicros = 0;
+
+uint32_t count = 0;
+uint32_t remoteCount = 0;
+bool firstFiveDone = false;
+uint32_t firstFiveCtr = 0;
 
 void loop()
 {
   printFullConfig();
   
-  while(true) {   
-    if(micros() - lastMicros >= 1000000) {
-      Serial.print("Speed: "); Serial.print((sentBytes / passedMicros)); Serial.println("KB/s");
-      lastMicros = micros();
-      sentBytes = 0;
-    }
+  while(true) {  
+    passedMicros = micros() - lastMicros;
     
-    *((uint32_t*)packetBuffer) = count++;
-    radio.sendPacket(packetBuffer, NRF_SIZE, false);
-    sentBytes += NRF_SIZE;
+    if(radio.getRxPipe() != RX_P_NO_FIFO_EMPTY) {
+      radio.recvPacket(recvBuffer);
+      recvBytes += NRF_SIZE;
+      remoteCount = *(uint32_t*)recvBuffer;
+      
+      if(!firstFiveDone) {
+        firstFiveCtr++;
+        if(firstFiveCtr == 5) {
+          firstFiveDone = true;
+          count = remoteCount;
+          Serial.println("go...");
+        }
+        else
+          continue;
+      }
+      
+      if(count++ != remoteCount) {
+        //Serial.println("ERROR!");
+        count = remoteCount;
+      }
+    }
+   
+    if(passedMicros >= 1000000) {
+      Serial.print("Speed: "); Serial.print((recvBytes / 1024.0) / (passedMicros / 1000000.0)); Serial.println("KB/s");
+      lastMicros = micros();
+      recvBytes = 0;
+    }  
   }
 }
 

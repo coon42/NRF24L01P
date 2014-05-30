@@ -24,7 +24,7 @@
 #define CMD_R_RX_PL_WID          0x60
 #define CMD_W_ACK_PAYLOAD        0xA8 // Mask
 #define CMD_W_TX_PAYLOAD_NO_ACK  0xB0
-#define CMD_NOP                  0xFF20
+#define CMD_NOP                  0xFF
 
 // Registers
 #define REG_CONFIG               0x00
@@ -51,9 +51,6 @@
 #define REG_RX_PW_P4             0x15
 #define REG_RX_PW_P5             0x16
 #define REG_FIFO_STATUS          0x17
-// #define REG_ACK_PLD           N/A ???
-// #define REG_TX_PLD            N/A ???
-// #define REG_RX_PLD            N/A ???
 #define REG_DYNPD                0x1C
 #define REG_FEATURE              0x1D
 
@@ -85,23 +82,93 @@
 #define ERX_P1                   0x02
 #define ERX_P0                   0x01
 
+// SETUP_AW
+enum {AW_3BYTES  = 0x01, 
+      AW_4BYTES  = 0x02,
+      AW_5BYTES  = 0x03};
+
+// SETUP_RETR
+enum {ARD_RT_DELAY_250US   = 0x00 << 4,
+      ARD_RT_DELAY_500US   = 0x01 << 4,
+      ARD_RT_DELAY_750US   = 0x02 << 4,
+      ARD_RT_DELAY_1000US  = 0x03 << 4,
+      ARD_RT_DELAY_1250US  = 0x04 << 4,
+      ARD_RT_DELAY_1500US  = 0x05 << 4,
+      ARD_RT_DELAY_1750US  = 0x06 << 4,
+      ARD_RT_DELAY_2000US  = 0x07 << 4,
+      ARD_RT_DELAY_2250US  = 0x08 << 4,
+      ARD_RT_DELAY_2500US  = 0x09 << 4,
+      ARD_RT_DELAY_2750US  = 0x0A << 4,
+      ARD_RT_DELAY_3000US  = 0x0B << 4,
+      ARD_RT_DELAY_3250US  = 0x0C << 4,
+      ARD_RT_DELAY_3500US  = 0x0D << 4,
+      ARD_RT_DELAY_3750US  = 0x0E << 4,
+      ARD_RT_DELAY_4000US  = 0x0F << 4};
+
+enum {ARC_RT_DISABLED  = 0x00,
+      ARD_RT_COUNT_1   = 0x01,
+      ARD_RT_COUNT_2   = 0x02,
+      ARD_RT_COUNT_3   = 0x03,
+      ARD_RT_COUNT_4   = 0x04,
+      ARD_RT_COUNT_5   = 0x05,
+      ARD_RT_COUNT_6   = 0x06,
+      ARD_RT_COUNT_7   = 0x07,
+      ARD_RT_COUNT_8   = 0x08,
+      ARD_RT_COUNT_9   = 0x09,
+      ARD_RT_COUNT_10  = 0x0A,
+      ARD_RT_COUNT_11  = 0x0B,
+      ARD_RT_COUNT_12  = 0x0C,
+      ARD_RT_COUNT_13  = 0x0D,
+      ARD_RT_COUNT_14  = 0x0E,
+      ARD_RT_COUNT_15  = 0x0F};
+      
+// RF_CH
+// Any value between 0 - 127
+
 // RF_SETUP
-#define CONT_WAVE                0x40      
+#define CONT_WAVE                0x80      
 #define RF_DR_LOW                0x20
 #define PLL_LOCK                 0x10
 #define RF_DR_HIGH               0x08
-enum {RF_PWR_0, RF_PWR_1, RF_PWR_2, RF_PWR_3};
-enum {AW_ILLEGAL, AW_3BYTES, AW_4BYTES, AW_5BYTES};
-
-#define RX_DR                    0x40 // 6
-#define TX_DS                    0x20 // 5
-#define MAX_RT                   0x10 // 4
-//      RX_P_NO                       // 1..3
-#define TX_FULL                  0x01 // 0                    
+enum {RF_PWR_0  = 0x00 << 1,
+      RF_PWR_1  = 0x01 << 1,
+      RF_PWR_2  = 0x02 << 1,
+      RF_PWR_3  = 0x03 << 1};
 
 
-// TODO: add rest?
+// STATUS
+#define RX_DR                    0x40 
+#define TX_DS                    0x20 
+#define MAX_RT                   0x10 
+enum{RX_P_NO_FIFO_EMPTY = 0x07};
+#define RX_P_NO(reg_status) (reg_status & 0x0F) >> 1
+#define TX_FULL                  0x01
 
+
+// OBSERVE_TX
+#define PLOS_CNT(reg_observeTx) reg_observeTx >> 4;
+#define ARC_CNT(reg_observeTx) reg_observeTx & 0x0F;
+
+
+// FIFO_STATUS
+#define TX_REUSE 0x40
+#define TX_FULL  0x20
+#define TX_EMPTY 0x10
+#define RX_FULL  0x02
+#define RX_EMPTY 0x01
+
+// DYN_PD
+#define DPL_P5 0x20
+#define DPL_P4 0x10
+#define DPL_P3 0x08
+#define DPL_P2 0x04
+#define DPL_P1 0x02
+#define DPL_P0 0x01
+
+// FEATURE
+#define EN_DPL     0x04
+#define EN_ACK_PAY 0x02
+#define EN_DYN_ACK 0x01
 
 
 // Data Rates
@@ -118,6 +185,7 @@ enum { SPEED_250K = 0, SPEED_1M = 1, SPEED_2M = 2 };
 class NRF24 {
   public:
     void init(uint8_t channel);
+    void reset(); // TODO: reset registers to default values
     void powerUp(bool enable);     // CONFIG
     void enableCRC(uint8_t numBytes);
     void listenMode(bool enable);
@@ -127,15 +195,15 @@ class NRF24 {
     void setRFChannel(uint8_t channel);                 // RF_CH
     void setDataRate(uint8_t dataRate);                 // RF_SETUP
     void setXmitPower(uint8_t powerLevel);              // RF_SETUP
-    void setRxAddress(uint8_t* addr);
+    void setRxAddress(uint8_t* addr);  // TODO: refactor for subaddresses?
     void setTxAddress(uint8_t* addr);                   // RX_ADDR_P(N)
     void setPayloadSize(uint8_t pipeId, uint8_t size);  // RX_PW_P0
     void setRxAddress(uint8_t pipeId, uint8_t* rxAddr); // RX_ADDR_P(N)
     int8_t sendPacket(uint8_t* packet, int8_t payloadSize, bool listenAfterSend = true); // W_TX_PAYLOAD
     
     // register
-    uint8_t readRegister(uint8_t reg, uint8_t* dataIn);
-    uint8_t readRegister(uint8_t reg, uint8_t* dataIn, uint8_t len);
+    void readRegister(uint8_t reg, uint8_t* dataIn);
+    void readRegister(uint8_t reg, uint8_t* dataIn, uint8_t len);
     void writeRegister(uint8_t reg, uint8_t* dataOut);
     void writeRegister(uint8_t reg, uint8_t* dataOut, uint8_t len);
     
@@ -162,7 +230,7 @@ class NRF24 {
     uint8_t getRxAddress(uint8_t pipeId, uint8_t* rxAddr);
     uint8_t getTxAddress(uint8_t* txAddr);
     uint8_t getRFChannel(); // RF_CH
-    bool dataIsAvailable();
+    uint8_t getRxPipe(); // STATUS -> RX_P_NO
     uint8_t getDataRate();
     bool isListening();
     uint8_t getPayloadSize(uint8_t pipeId);
@@ -189,5 +257,4 @@ class NRF24 {
     void setMask(uint8_t* var, uint8_t mask) { *var |= mask; }
     void resetMask(uint8_t* var, uint8_t mask) { *var &= ~(mask); }
     void setMaskOfRegisterIfTrue(uint8_t reg, uint8_t mask, bool set);
-
 };
