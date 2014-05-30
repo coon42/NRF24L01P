@@ -59,18 +59,12 @@ int8_t NRF24::readPayload(uint8_t* payload) {
   return payloadSize;
 }
 
-void NRF24::writePayload(uint8_t* payload, uint8_t payloadSize) {    
+void NRF24::writePayload(uint8_t* payload, uint8_t payloadSize) {
   csnLow();
   SPI.transfer(CMD_W_TX_PAYLOAD);
   for(int i = 0; i < payloadSize; i++)
     SPI.transfer(payload[i]);
-  csnHigh();
-
-  ceHigh();
-  //delayMicroseconds(20); // Minimum CE high
-  //ceLow();
-  //delayMicroseconds(10); // Delay from CE positive edge to CSN low (4us min)
-  
+  csnHigh();  
 }
 
 void NRF24::setMaskOfRegisterIfTrue(uint8_t reg, uint8_t mask, bool set) {
@@ -122,7 +116,9 @@ void NRF24::powerUp(bool enable) {
 }
 
 void NRF24::listenMode(bool enable) {
-  setMaskOfRegisterIfTrue(REG_CONFIG, PRIM_RX, enable);
+  // delay transition between rx and tx must be at least 130us
+  // else the chip meight crash.
+  delayMicroseconds(200); 
   digitalWrite(CHIP_ENABLE_PIN, enable ? HIGH : LOW);
 }
 
@@ -376,10 +372,8 @@ uint8_t NRF24::getPayloadSizeRxFifoTop() {
   uint8_t size;
   
   csnLow();
-  
   SPI.transfer(CMD_R_RX_PL_WID);
   size = SPI.transfer(0x00);
-  
   csnHigh();
   
   return size;
@@ -403,14 +397,18 @@ void NRF24::clearRxInterrupt() {
   writeRegister(REG_STATUS, &rfStatus);
 }
 
-void NRF24::flushRxFifo() {
-  NRFDBG("DBG: RX FIFO FLUSHED!")
+void NRF24::flushRxFifo() {  
+  csnLow();
   SPI.transfer(CMD_FLUSH_RX);
+  csnHigh();
+  NRFDBG("NRFDBG: RX FIFO FLUSHED!")
 }
 
 void NRF24::flushTxFifo() {
-  NRFDBG("DBG: TX FIFO FLUSHED!")
+  csnLow();
   SPI.transfer(CMD_FLUSH_TX);
+  csnHigh();
+  NRFDBG("NRFDBG: TX FIFO FLUSHED!")
 }
 
 int8_t NRF24::sendPacket(uint8_t* packet, int8_t payloadSize, bool listenAfterSend) {
@@ -420,21 +418,33 @@ int8_t NRF24::sendPacket(uint8_t* packet, int8_t payloadSize, bool listenAfterSe
   if(payloadSize < 1 || payloadSize > 32)
     return NRF_INVALID_PAYLOAD_SIZE;
   
-  if(isListening()) {
-    delayMicroseconds(200);
+  if(isListening())
     listenMode(false);
-  }
   
   writePayload(packet, payloadSize);
   
-  if(listenAfterSend) {
-    // delay transition between rx and tx must be at least 130us
-    // else the chip meight not receive anymore.
-    delayMicroseconds(200); 
-    listenMode(true);
+  // To initially start a transmission, it is important that something in the TX FIFO
+  // before pulling the chip enable pin high. If chip enable is already set when the payload is empty, 
+  // the transmission will NOT be initiated before ce got pulled low and high again!
+  
+  /*
+  if(!digitalRead(CHIP_ENABLE_PIN)) {
+    ceHigh();
+    delayMicroseconds(10); // Delay from CE positive edge to CSN low
   }
+  */
+  
+  if(listenAfterSend)
+    listenMode(true);
+  
   
   return NRF_OK;
+}
+
+bool NRF24::txFifoIsFull() {
+  uint8_t fifostatus;
+  readRegister(REG_FIFO_STATUS, &fifostatus);
+  return fifostatus & TX_FULL;
 }
 
 void NRF24::init(uint8_t channel) {
@@ -445,7 +455,7 @@ void NRF24::init(uint8_t channel) {
   digitalWrite(CHIP_ENABLE_PIN, LOW);
   digitalWrite(CHIP_SELECT_PIN, HIGH);
 
-  flushTxFifo();  
+  flushTxFifo();   
   flushRxFifo();
   setRFChannel(channel);
   listenMode(true);

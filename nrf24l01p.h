@@ -1,5 +1,7 @@
 #include "Energia.h"
 
+// TODO: - low energy stuff
+
 #define NRF24_DEBUG 1
 
 #ifdef NRF24_DEBUG 
@@ -235,14 +237,17 @@ class NRF24 {
     uint8_t getPayloadSizeRxFifoTop();
     uint32_t recvPacket(uint8_t* packet);
 
-    void flushRxFifo();
-    void flushTxFifo();
+    void flushRxFifo(); // Will drop ALL elements from the RX FIFO
+    void flushTxFifo(); // Will drop ALL elements from the TX FIFO
+    
+    bool txFifoIsFull(); // FIFO_STATUS
     
   private:
     void csnLow();
-    void csnHigh();
+    void csnHigh();  
     void ceLow();
     void ceHigh();
+    
     void clearRxInterrupt();
 
     // payload

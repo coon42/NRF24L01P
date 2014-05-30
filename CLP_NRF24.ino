@@ -12,8 +12,9 @@ Configurable:
 CE -> PE_0
 CSN -> PE_1
 
+
 created 09 May 2014
-modified 30 May 2014
+modified 26 May 2014
 by coon
 */
 
@@ -32,7 +33,9 @@ NRF24 radio;
 uint8_t recvBuffer[NRF_SIZE];
 
 void setup()
-{ 
+{
+  pinMode(USR_SW2, INPUT_PULLUP);
+  
   Ethernet.begin(mac, ip);
   Udp.begin(localPort);
   Serial.begin(115200);
@@ -40,10 +43,10 @@ void setup()
 
   radio.enableCRC(0);
   radio.enableShockburst(0, false);
-  radio.enableDataPipe(1, true);
+  radio.enableDataPipe(0, true);
   radio.setAddressWidth(5);
   radio.powerUp(true);
-  radio.listenMode(true);
+  radio.listenMode(false);
 
   uint8_t rxaddr[] = {0x01, 0x02, 0x03, 0x02, 0x01 };
   uint8_t txaddr[] = {0x01, 0x02, 0x03, 0x02, 0x01 };
@@ -100,7 +103,7 @@ void printFullConfig() {
     Serial.println("");
   }
   
-  Serial.println("TX Addresses: ");
+  Serial.println("TX Address: ");
   
   uint8_t txAddr[5];
   radio.getTxAddress(txAddr);
@@ -108,59 +111,43 @@ void printFullConfig() {
   for(int i = 0; i < radio.getAddressWidths(); i++) {
     Serial.print("0x"); Serial.print(txAddr[i], HEX); Serial.print(" ");
   }
+  Serial.println("");
   
-  Serial.println("Status: ");
-  uint32_t rxPipe = radio.getRxPipe();
-  Serial.print("  RX_FIFO: ");
-  if(rxPipe != RX_P_NO_FIFO_EMPTY) {
-    Serial.print("Data available on pipe: "); Serial.println(rxPipe);  
+  bool fifoIsFull = radio.txFifoIsFull();
+  Serial.print("TX_FIFO: "); Serial.println(fifoIsFull ? "Full" : "Free");
+  
+  if(radio.txFifoIsFull()) {
+    Serial.println("TX FIFO FULL! STOP!!!");
+    while(true);
   }
-  else
-    Serial.println("Empty");
 }
 
-uint32_t recvBytes = 0;
+uint32_t count = 0;
+
+uint32_t sentBytes = 0;
 uint32_t lastMicros = 0;
 uint32_t passedMicros = 0;
-
-uint32_t count = 0;
-uint32_t remoteCount = 0;
-bool firstFiveDone = false;
-uint32_t firstFiveCtr = 0;
 
 void loop()
 {
   printFullConfig();
   
-  while(true) {  
+  while(true) {
     passedMicros = micros() - lastMicros;
     
-    if(radio.recvPacket(recvBuffer) != NRF_NO_DATA_AVAILABLE) {
-      recvBytes += NRF_SIZE;
-      remoteCount = *(uint32_t*)recvBuffer;
-      
-      if(!firstFiveDone) {
-        firstFiveCtr++;
-        if(firstFiveCtr == 5) {
-          firstFiveDone = true;
-          count = remoteCount;
-          Serial.println("go...");
-        }
-        else
-          continue;
-      }
-      
-      if(count++ != remoteCount) {
-        //Serial.println("ERROR!");
-        count = remoteCount;
-      }
-    }
-   
     if(passedMicros >= 1000000) {
-      Serial.print("Speed: "); Serial.print((recvBytes / 1024.0) / (passedMicros / 1000000.0)); Serial.println("KB/s");
+      Serial.print("Speed: "); Serial.print((sentBytes / 1024.0) / (passedMicros / 1000000.0)); Serial.println("KB/s");
       lastMicros = micros();
-      recvBytes = 0;
-    }  
+      sentBytes = 0;
+    }
+        
+    *((uint32_t*)packetBuffer) = count++;
+    while(radio.txFifoIsFull());
+    
+    radio.sendPacket(packetBuffer, NRF_SIZE, false);
+    Serial.println("sende...");
+    
+    sentBytes += NRF_SIZE;
   }
 }
 
