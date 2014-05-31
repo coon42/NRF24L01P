@@ -1,6 +1,31 @@
 #include "Energia.h"
 
-// TODO: - low energy stuff
+/*
+NRF24L01+ library for Connected Launchpad Tiva C
+
+created 09 May 2014
+modified 31 May 2014
+by coon (coon@c-base.org)
+
+SPI Pins: 
+NRF <-> Launchpad
+-----------------
+MISO -> PE_5
+MOSI -> PE_4
+SCK -> PB_5
+
+Configurable:
+CE -> PE_0
+CSN -> PE_1
+
+
+// TODO: 
+// - Refactor from C++ to C
+// - Hardware abstraction layer
+// - Interrupt support
+// - Shockburst
+// - Low energy stuff
+*/
 
 #define NRF24_DEBUG 1
 
@@ -10,10 +35,16 @@
 #define NRFDBG(functionName)
 #endif
 
-// SPI GPIO config
+// Every second the transmitter will be set to standby-I mode 
+// for a short time to cooldown. The datasheet days this has 
+// to be done every 4ms but one second seems also to work. 
+// If you don't let the chip cooldown, it will stop transmitting 
+// sporadicly when sending at maximum speed.
+#define TX_COOLDOWN_TIME 1000000 
+
+// SPI GPIO config (TODO: lay out in HAL)
 #define CHIP_ENABLE_PIN PE_0 // CE
 #define CHIP_SELECT_PIN PE_1 // CSN
-
 
 // custom errors (TODO: make a higher NRF layer?) 
 #define NRF_OK 0;
@@ -21,6 +52,14 @@
 #define NRF_NO_DATA_AVAILABLE -2
 #define NRF_INVALID_PAYLOAD_SIZE -3
 
+// Constants
+#define NRF_MAX_PAYLOAD_SIZE 32
+#define PIPE_0 0
+#define PIPE_1 1
+#define PIPE_2 2
+#define PIPE_3 3
+#define PIPE_4 4
+#define PIPE_5 5
 
 // Commands
 #define CMD_R_REGISTER           0x00 // Mask 
@@ -199,13 +238,7 @@ class NRF24 {
     void setTxAddress(uint8_t* addr);                   // RX_ADDR_P(N)
     void setPayloadSize(uint8_t pipeId, uint8_t size);  // RX_PW_P0
     void setRxAddress(uint8_t pipeId, uint8_t* rxAddr); // RX_ADDR_P(N)
-    int8_t sendPacket(uint8_t* packet, int8_t payloadSize, bool listenAfterSend = true); // W_TX_PAYLOAD
-    
-    // register
-    void readRegister(uint8_t reg, uint8_t* dataIn);
-    void readRegister(uint8_t reg, uint8_t* dataIn, uint8_t len);
-    void writeRegister(uint8_t reg, uint8_t* dataOut);
-    void writeRegister(uint8_t reg, uint8_t* dataOut, uint8_t len);
+    int8_t sendPacket(void* packet, int8_t payloadSize, bool listenAfterSend = true); // W_TX_PAYLOAD
     
     // TODO: SETUP_RETR
 
@@ -235,18 +268,29 @@ class NRF24 {
     bool isListening();
     uint8_t getPayloadSize(uint8_t pipeId);
     uint8_t getPayloadSizeRxFifoTop();
-    uint32_t recvPacket(uint8_t* packet);
+    uint32_t recvPacket(void* packet);
 
     void flushRxFifo(); // Will drop ALL elements from the RX FIFO
     void flushTxFifo(); // Will drop ALL elements from the TX FIFO
-    
     bool txFifoIsFull(); // FIFO_STATUS
+    bool txFifoIsEmpty(); // FIFO_STATUS
     
   private:
+    // For some reason the transmitter must not be active for more at 4ms at a time
+    // so it has to be set in standby I mode after 4ms beeing active for cooldown.
+    uint32_t txTimeUs_;
+    void checkForCooldown();
+  
     void csnLow();
     void csnHigh();  
     void ceLow();
     void ceHigh();
+    
+    // register access
+    void readRegister(uint8_t reg, uint8_t* dataIn);
+    void readRegister(uint8_t reg, uint8_t* dataIn, uint8_t len);
+    void writeRegister(uint8_t reg, uint8_t* dataOut);
+    void writeRegister(uint8_t reg, uint8_t* dataOut, uint8_t len);
     
     void clearRxInterrupt();
 

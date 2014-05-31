@@ -380,7 +380,7 @@ uint8_t NRF24::getPayloadSizeRxFifoTop() {
   return size;
 }
 
-uint32_t NRF24::recvPacket(uint8_t* packet) {
+uint32_t NRF24::recvPacket(void* packet) {
   if(!isPoweredOn())
     return NRF_DEVICE_NOT_POWERED_ON;
   
@@ -388,7 +388,7 @@ uint32_t NRF24::recvPacket(uint8_t* packet) {
   if(pipeId == RX_P_NO_FIFO_EMPTY)
     return NRF_NO_DATA_AVAILABLE;
   
-  return readPayload(packet);
+  return readPayload((uint8_t*)packet);
 }
 
 void NRF24::clearRxInterrupt() {
@@ -412,7 +412,7 @@ void NRF24::flushTxFifo() {
   NRFDBG("NRFDBG: TX FIFO FLUSHED!")
 }
 
-int8_t NRF24::sendPacket(uint8_t* packet, int8_t payloadSize, bool listenAfterSend) {
+int8_t NRF24::sendPacket(void* packet, int8_t payloadSize, bool listenAfterSend) {
   if(!isPoweredOn())
     return NRF_DEVICE_NOT_POWERED_ON;
     
@@ -421,9 +421,11 @@ int8_t NRF24::sendPacket(uint8_t* packet, int8_t payloadSize, bool listenAfterSe
   
   if(isListening())
     listenMode(false);
-  
-  writePayload(packet, payloadSize);
 
+  while(txFifoIsFull());
+  checkForCooldown();  
+  writePayload((uint8_t*)packet, payloadSize);
+  
   // To initially start a transmission, it is important that something in the TX FIFO
   // before pulling the chip enable pin high. If chip enable is already set when the payload is empty, 
   // the transmission will NOT be initiated before ce got pulled low and high again!   
@@ -431,11 +433,9 @@ int8_t NRF24::sendPacket(uint8_t* packet, int8_t payloadSize, bool listenAfterSe
     ceHigh();
     delayMicroseconds(10); // Delay from CE positive edge to CSN low
   }
-  
-  
+
   if(listenAfterSend)
     listenMode(true);
-  
   
   return NRF_OK;
 }
@@ -446,6 +446,22 @@ bool NRF24::txFifoIsFull() {
   return fifostatus & TX_FULL;
 }
 
+bool NRF24::txFifoIsEmpty() {
+  uint8_t fifostatus;
+  readRegister(REG_FIFO_STATUS, &fifostatus);
+  return fifostatus & TX_EMPTY;
+}
+
+void NRF24::checkForCooldown() {
+  if(!txFifoIsEmpty())
+    if(txTimeUs_ == 0)
+      txTimeUs_ = micros(); // start the timer
+    else if(micros() - txTimeUs_ >= TX_COOLDOWN_TIME) {
+      while(!txFifoIsEmpty()); // wait for empty FIFO so the transmitter can go to standby I mode and gets a little cooldown.
+      txTimeUs_ = 0; // reset the timer
+    }
+}
+
 void NRF24::init(uint8_t channel) {
   SPI.begin();
   
@@ -454,6 +470,7 @@ void NRF24::init(uint8_t channel) {
   digitalWrite(CHIP_ENABLE_PIN, LOW);
   digitalWrite(CHIP_SELECT_PIN, HIGH);
 
+  txTimeUs_ = 0;
   flushTxFifo();   
   flushRxFifo();
   setRFChannel(channel);

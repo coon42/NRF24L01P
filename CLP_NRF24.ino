@@ -1,5 +1,15 @@
 /*
-NRF24L01+ example
+NRF24L01+ example for connected launchpad
+
+This example shows how to use this NRF24L01+ library.
+Set NRF_MODE to 0 for setting the device in receiver mode
+and set it to 1 for setting it to sending mode.
+In sending mode the device will periodicly send a text to the
+other NRF device.
+
+You can watch the result by connecting with a serial terminal 
+using the DEBUG micro USB port of your launchpad.
+
 
 Pins: 
 Hardware SPI:
@@ -14,49 +24,39 @@ CSN -> PE_1
 
 
 created 09 May 2014
-modified 26 May 2014
-by coon
+modified 31 May 2014
+by coon (coon@c-base.org)
 */
 
-#include "nrf24l01p.h"
-#include <Ethernet.h>
-#include <EthernetUdp.h>
+#define NRF_MODE 0 // 0 = sender, 1 = receiver
+#define NRF_PAYLOAD_SIZE 32
 
-byte mac[] = {0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED};
-IPAddress ip(192,168,0,142);
-unsigned int localPort = 2342;
-uint8_t packetBuffer[UDP_TX_PACKET_MAX_SIZE];
-EthernetUDP Udp;
+#include "nrf24l01p.h"
 
 NRF24 radio;
-#define NRF_SIZE 32
-uint8_t recvBuffer[NRF_SIZE];
+char recvBuffer[NRF_MAX_PAYLOAD_SIZE];
 
 void setup()
-{
-  pinMode(USR_SW2, INPUT_PULLUP);
-  
-  Ethernet.begin(mac, ip);
-  Udp.begin(localPort);
+{  
   Serial.begin(115200);
-  radio.init(81);
-
-  radio.enableCRC(0);
-  radio.enableShockburst(0, false);
-  radio.enableDataPipe(0, true);
-  radio.setAddressWidth(5);
-  radio.powerUp(true);
-  radio.listenMode(false);
-
+  radio.init(83);
+  
   uint8_t rxaddr[] = {0x01, 0x02, 0x03, 0x02, 0x01 };
   uint8_t txaddr[] = {0x01, 0x02, 0x03, 0x02, 0x01 };
-  radio.setRxAddress(0, rxaddr);
+  radio.setRxAddress(PIPE_0, rxaddr);
   radio.setTxAddress(txaddr);
+  radio.enableCRC(0);
+  radio.enableDataPipe(PIPE_0, true);
+  radio.enableShockburst(PIPE_0, false);
+  radio.setAddressWidth(5);
+  radio.listenMode(NRF_MODE);
   radio.setDataRate(SPEED_2M);
-  radio.setPayloadSize(0, NRF_SIZE);
+  radio.setPayloadSize(PIPE_0, NRF_PAYLOAD_SIZE);
+  radio.powerUp(true);
    
-  Serial.println("NRF24L01+ Library");
-  Serial.println("-----------------");
+  Serial.println("NRF24L01+ Library Example");
+  Serial.println("-------------------------");
+  printFullConfig();
 }
 
 void printFullConfig() {  
@@ -76,14 +76,12 @@ void printFullConfig() {
   }
   
   Serial.println("RX Data Pipes:");
-  
   for(int i = 0; i < 6; i++) {
     Serial.print("  ERX_P"); Serial.print(i); Serial.print(": ");
     Serial.println(radio.dataPipeIsEnabled(i) ? "Enabled" : "Disabled");
   }
   
   Serial.println("RX Payload sizes: ");
-  
   for(int i = 0; i < 6; i++) {
     Serial.print("  RX_PW_P"); Serial.print(i); Serial.print(": ");
     Serial.println(radio.getPayloadSize(i));
@@ -104,7 +102,6 @@ void printFullConfig() {
   }
   
   Serial.println("TX Address: ");
-  
   uint8_t txAddr[5];
   radio.getTxAddress(txAddr);
   Serial.print("  TX_ADDR: ");
@@ -115,54 +112,33 @@ void printFullConfig() {
   
   bool fifoIsFull = radio.txFifoIsFull();
   Serial.print("TX_FIFO: "); Serial.println(fifoIsFull ? "Full" : "Free");
-  
-  if(radio.txFifoIsFull()) {
-    Serial.println("TX FIFO FULL! STOP!!!");
-    while(true);
-  }
 }
-
-uint32_t count = 0;
-
-uint32_t sentBytes = 0;
-uint32_t lastMicros = 0;
-uint32_t passedMicros = 0;
 
 void loop()
 {
-  printFullConfig();
-  
-  radio.listenMode(true);
-  Serial.print("CE: "); Serial.println(digitalRead(CHIP_ENABLE_PIN));
-  Serial.print("Listening: "); Serial.println(radio.isListening());
-  
-  
-  while(true) {
-    int32_t size = radio.recvPacket(recvBuffer);
+  if(NRF_MODE == 1) { 
+    // receiver mode
+    int32_t recvByteCount;
     
-    if(size != NRF_NO_DATA_AVAILABLE)
-      for(int i = 0; i < size; i++) {
-        Serial.println("Data: "); Serial.println(recvBuffer[i], HEX); Serial.println(", ");
+    while(true) {
+      recvByteCount = radio.recvPacket(recvBuffer);
+      if(recvByteCount != NRF_NO_DATA_AVAILABLE) {
+        Serial.print("Received: ");
+        for(int i = 0; i < recvByteCount; i++) {
+          Serial.print((char)recvBuffer[i]);
+        }
+        Serial.println("");
       }
+    }  
   }
-  
-    
- /*
-  while(true) {
-    passedMicros = micros() - lastMicros;
-    
-    if(passedMicros >= 1000000) {
-      Serial.print("Speed: "); Serial.print((sentBytes / 1024.0) / (passedMicros / 1000000.0)); Serial.println("KB/s");
-      lastMicros = micros();
-      sentBytes = 0;
+  else { 
+    // sending mode
+    while(true) {
+      char* exampleText = "This text was sent over the air!";
+      Serial.print("Sent: "); Serial.println(exampleText);
+      radio.sendPacket(exampleText, NRF_PAYLOAD_SIZE, false);
+      delay(1000); // wait one second 
     }
-        
-    *((uint32_t*)packetBuffer) = count++;
-    while(radio.txFifoIsFull());
-    radio.sendPacket(packetBuffer, NRF_SIZE, false);
-    
-    sentBytes += NRF_SIZE;
   }
- */ 
 }
 
