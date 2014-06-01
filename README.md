@@ -24,6 +24,7 @@ Features:
 
 Todo:
 -----
+- Auto model detection (NRF24L01+ or NRF24L01)
 - Adding a hardware abstraction layer for better portability
 - Shockburst (Auto retransmission feature)
 - Dynamic payloads
