@@ -5,6 +5,7 @@ NRF24L01+ library for Connected Launchpad Tiva C
 
 created 09 May 2014
 modified 31 May 2014
+version: 0.85
 by coon (coon@c-base.org)
 
 SPI Pins: 
@@ -27,7 +28,7 @@ CSN -> PE_1
 // - Low energy stuff
 */
 
-#define NRF24_DEBUG 1
+#define NRF24_DEBUG 0
 
 #ifdef NRF24_DEBUG 
 #define NRFDBG(functionName) Serial.println(functionName);
@@ -74,7 +75,7 @@ CSN -> PE_1
 #define CMD_W_TX_PAYLOAD_NO_ACK  0xB0
 #define CMD_NOP                  0xFF
 
-// Registers
+// Register offsets
 #define REG_CONFIG               0x00
 #define REG_EN_AA                0x01
 #define REG_EN_RXADDR            0x02
@@ -102,56 +103,68 @@ CSN -> PE_1
 #define REG_DYNPD                0x1C
 #define REG_FEATURE              0x1D
 
-// Register masks
-// -----------------
+// Register structures
+typedef struct {
+  uint8_t prim_rx     : 1;
+  uint8_t pwr_up      : 1;
+  uint8_t crco        : 1;
+  uint8_t en_crc      : 1;
+  uint8_t mask_max_rt : 1;
+  uint8_t mask_tx_ds  : 1;
+  uint8_t mask_rx_dr  : 1;  
+  uint8_t             : 1; // reserved
+} RegNrf24CONFIG_t;
 
-// CONFIG
-#define MASK_RX_DR               0x40 // 6
-#define MASK_TX_DS               0x20 // 5
-#define MASK_MAX_RT              0x10 // 4
-#define EN_CRC                   0x08 // 3
-#define CRCO                     0x04 // 2
-#define PWR_UP                   0x02 // 1
-#define PRIM_RX                  0x01 // 0
+typedef struct {
+  uint8_t enaa_p0 : 1;
+  uint8_t enaa_p1 : 1;
+  uint8_t enaa_p2 : 1;
+  uint8_t enaa_p3 : 1;
+  uint8_t enaa_p4 : 1;
+  uint8_t enaa_p5 : 1;
+  uint8_t         : 2;
+} RegNrf24EN_AA_t;
 
-// EN_AA
-#define ENAA_P5                  0x20
-#define ENAA_P4                  0x10
-#define ENAA_P3                  0x08
-#define ENAA_P2                  0x04
-#define ENAA_P1                  0x02
-#define ENAA_P0                  0x01
+typedef struct {
+  uint8_t erx_p0 : 1;
+  uint8_t erx_p1 : 1;
+  uint8_t erx_p2 : 1;
+  uint8_t erx_p3 : 1;
+  uint8_t erx_p4 : 1;
+  uint8_t erx_p5 : 1;
+  uint8_t        : 2;
+} RegNrf24EN_RXADDR_t;
 
-// EN_RXADDR
-#define ERX_P5                   0x20
-#define ERX_P4                   0x10
-#define ERX_P3                   0x08
-#define ERX_P2                   0x04
-#define ERX_P1                   0x02
-#define ERX_P0                   0x01
+typedef struct {
+  uint8_t aw : 2;
+  uint8_t    : 6;
+} RegNrf24SETUP_AW_t;
 
-// SETUP_AW
 enum {AW_3BYTES  = 0x01, 
       AW_4BYTES  = 0x02,
       AW_5BYTES  = 0x03};
 
-// SETUP_RETR
-enum {ARD_RT_DELAY_250US   = 0x00 << 4,
-      ARD_RT_DELAY_500US   = 0x01 << 4,
-      ARD_RT_DELAY_750US   = 0x02 << 4,
-      ARD_RT_DELAY_1000US  = 0x03 << 4,
-      ARD_RT_DELAY_1250US  = 0x04 << 4,
-      ARD_RT_DELAY_1500US  = 0x05 << 4,
-      ARD_RT_DELAY_1750US  = 0x06 << 4,
-      ARD_RT_DELAY_2000US  = 0x07 << 4,
-      ARD_RT_DELAY_2250US  = 0x08 << 4,
-      ARD_RT_DELAY_2500US  = 0x09 << 4,
-      ARD_RT_DELAY_2750US  = 0x0A << 4,
-      ARD_RT_DELAY_3000US  = 0x0B << 4,
-      ARD_RT_DELAY_3250US  = 0x0C << 4,
-      ARD_RT_DELAY_3500US  = 0x0D << 4,
-      ARD_RT_DELAY_3750US  = 0x0E << 4,
-      ARD_RT_DELAY_4000US  = 0x0F << 4};
+typedef struct {
+  uint8_t arc : 4;
+  uint8_t ard : 4;
+} RegNrf24SETUP_RETR_t;
+
+enum {ARD_RT_DELAY_250US   = 0x00,
+      ARD_RT_DELAY_500US   = 0x01,
+      ARD_RT_DELAY_750US   = 0x02,
+      ARD_RT_DELAY_1000US  = 0x03,
+      ARD_RT_DELAY_1250US  = 0x04,
+      ARD_RT_DELAY_1500US  = 0x05,
+      ARD_RT_DELAY_1750US  = 0x06,
+      ARD_RT_DELAY_2000US  = 0x07,
+      ARD_RT_DELAY_2250US  = 0x08,
+      ARD_RT_DELAY_2500US  = 0x09,
+      ARD_RT_DELAY_2750US  = 0x0A,
+      ARD_RT_DELAY_3000US  = 0x0B,
+      ARD_RT_DELAY_3250US  = 0x0C,
+      ARD_RT_DELAY_3500US  = 0x0D,
+      ARD_RT_DELAY_3750US  = 0x0E,
+      ARD_RT_DELAY_4000US  = 0x0F};
 
 enum {ARC_RT_DISABLED  = 0x00,
       ARD_RT_COUNT_1   = 0x01,
@@ -169,57 +182,135 @@ enum {ARC_RT_DISABLED  = 0x00,
       ARD_RT_COUNT_13  = 0x0D,
       ARD_RT_COUNT_14  = 0x0E,
       ARD_RT_COUNT_15  = 0x0F};
-      
-// RF_CH
-// Any value between 0 - 127
+
+typedef struct {
+  uint8_t rf_ch : 7;
+  uint8_t       : 1;
+} RegNrf24RF_CH_t;
 
 // RF_SETUP
-#define CONT_WAVE                0x80      
-#define RF_DR_LOW                0x20
-#define PLL_LOCK                 0x10
-#define RF_DR_HIGH               0x08
+typedef struct {
+  uint8_t lna_hcurr  : 1; // only usable on old NRF24L01 chip / obsolete on + version.
+  uint8_t rf_pwr     : 2;
+  uint8_t rf_dr_high : 1; // rf_dr on NRF24L01
+  uint8_t pll_lock   : 1;
+  uint8_t rf_dr_low  : 1; // only on NRF24L01
+  uint8_t            : 1; // reserved
+  uint8_t cont_wave  : 1; // only on NRF24L01
+} RegNrf24RF_SETUP_t;
+
+// Data Rates
+enum { SPEED_250K = 0, SPEED_1M = 1, SPEED_2M = 2 };
+
 enum {RF_PWR_0  = 0x00 << 1,
       RF_PWR_1  = 0x01 << 1,
       RF_PWR_2  = 0x02 << 1,
       RF_PWR_3  = 0x03 << 1};
 
+typedef struct {
+  uint8_t tx_full : 1;
+  uint8_t rx_p_no : 3;
+  uint8_t max_rt  : 1;
+  uint8_t tx_ds   : 1;
+  uint8_t rx_dr   : 1;
+  uint8_t         : 1;
+} RegNrf24STATUS_t;
+enum { RX_P_NO_FIFO_EMPTY = 0x07 };
 
-// STATUS
-#define RX_DR                    0x40 
-#define TX_DS                    0x20 
-#define MAX_RT                   0x10 
-enum{RX_P_NO_FIFO_EMPTY = 0x07};
-#define RX_P_NO(reg_status) (reg_status & 0x0F) >> 1
-#define TX_FULL                  0x01
+typedef struct {
+  uint8_t arc_cnt  : 4;
+  uint8_t plos_cnt : 4;
+} RegNrf24OBSERVE_TX_t;
 
+typedef struct {
+  uint8_t rpd : 1;
+  uint8_t     : 7;
+} RegNrf24RPD_t;
 
-// OBSERVE_TX
-#define PLOS_CNT(reg_observeTx) reg_observeTx >> 4;
-#define ARC_CNT(reg_observeTx) reg_observeTx & 0x0F;
+typedef struct {
+  uint8_t rx_addr_p0[5];
+} RegNrf24RX_ADDR_P0_t;
 
+typedef struct {
+  uint8_t rx_addr_p1[5];
+} RegNrf24RX_ADDR_P1_t;
 
-// FIFO_STATUS
-#define TX_REUSE 0x40
-#define TX_FULL  0x20
-#define TX_EMPTY 0x10
-#define RX_FULL  0x02
-#define RX_EMPTY 0x01
+typedef struct {
+  uint8_t rx_addr_p2;
+} RegNrf24RX_ADDR_P2_t;
 
-// DYN_PD
-#define DPL_P5 0x20
-#define DPL_P4 0x10
-#define DPL_P3 0x08
-#define DPL_P2 0x04
-#define DPL_P1 0x02
-#define DPL_P0 0x01
+typedef struct {
+  uint8_t rx_addr_p3;
+} RegNrf24RX_ADDR_P3_t;
 
-// FEATURE
-#define EN_DPL     0x04
-#define EN_ACK_PAY 0x02
-#define EN_DYN_ACK 0x01
+typedef struct {
+  uint8_t rx_addr_p4;
+} RegNrf24RX_ADDR_P4_t;
 
-// Data Rates
-enum { SPEED_250K = 0, SPEED_1M = 1, SPEED_2M = 2 };
+typedef struct {
+  uint8_t rx_addr_p5;
+} RegNrf24RX_ADDR_P5_t;
+
+typedef struct {
+  uint8_t tx_addr[5];
+} RegNrf24TX_ADDR_t;
+
+typedef struct {
+  uint8_t rx_pw_p0 : 6;
+  uint8_t          : 2;
+} RegNrf24RX_PW_P0_t;
+
+typedef struct {
+  uint8_t rx_pw_p1 : 6;
+  uint8_t          : 2;
+} RegNrf24RX_PW_P1_t;
+
+typedef struct {
+  uint8_t rx_pw_p2 : 6;
+  uint8_t          : 2;
+} RegNrf24RX_PW_P2_t;
+
+typedef struct {
+  uint8_t rx_pw_p3 : 6;
+  uint8_t          : 2;
+} RegNrf24RX_PW_P3_t;
+
+typedef struct {
+  uint8_t rx_pw_p4 : 6;
+  uint8_t          : 2;
+} RegNrf24RX_PW_P4_t;
+
+typedef struct {
+  uint8_t rx_pw_p5 : 6;
+  uint8_t          : 2;
+} RegNrf24RX_PW_P5_t;
+
+typedef struct {
+  uint8_t rx_empty : 1;
+  uint8_t rx_full  : 1;
+  uint8_t          : 2;
+  uint8_t tx_empty : 1;
+  uint8_t tx_full  : 1;
+  uint8_t tx_reuse : 1;
+  uint8_t          : 1;
+} RegNrf24FIFO_STATUS_t;
+
+typedef struct {
+  uint8_t dpl_p0 : 1;
+  uint8_t dpl_p1 : 1;
+  uint8_t dpl_p2 : 1;
+  uint8_t dpl_p3 : 1;
+  uint8_t dpl_p4 : 1;
+  uint8_t dpl_p5 : 1;
+  uint8_t        : 2;
+} RegNrf24DYNPD_t;
+
+typedef struct {
+  uint8_t EN_DYN_ACK : 1;
+  uint8_t EN_ACK_PAY : 1;
+  uint8_t EN_DPL     : 1;
+  uint8_t            : 5;
+} RegNrf24FEATURE_t;
 
 class NRF24 {
   public:
@@ -263,7 +354,7 @@ class NRF24 {
     uint8_t getRxAddress(uint8_t pipeId, uint8_t* rxAddr);
     uint8_t getTxAddress(uint8_t* txAddr);
     uint8_t getRFChannel(); // RF_CH
-    uint8_t getRxPipe(); // STATUS -> RX_P_NO
+    uint8_t getCurrentRxPipe(); // STATUS -> RX_P_NO (gets the pipeId of the data on top of the RX fifo. TODO: rename?
     uint8_t getDataRate();
     bool isListening();
     uint8_t getPayloadSize(uint8_t pipeId);
@@ -287,19 +378,14 @@ class NRF24 {
     void ceHigh();
     
     // register access
-    void readRegister(uint8_t reg, uint8_t* dataIn);
-    void readRegister(uint8_t reg, uint8_t* dataIn, uint8_t len);
-    void writeRegister(uint8_t reg, uint8_t* dataOut);
-    void writeRegister(uint8_t reg, uint8_t* dataOut, uint8_t len);
+    void readRegister(uint8_t reg, void* dataIn);
+    void readRegister(uint8_t reg, void* dataIn, uint8_t len);
+    void writeRegister(uint8_t reg, void* dataOut);
+    void writeRegister(uint8_t reg, void* dataOut, uint8_t len);
     
     void clearRxInterrupt();
 
     // payload
     int8_t readPayload(uint8_t* payload);
     void writePayload(uint8_t* payload, uint8_t payloadSize);
-    
-    // binary helpers
-    void setMask(uint8_t* var, uint8_t mask) { *var |= mask; }
-    void resetMask(uint8_t* var, uint8_t mask) { *var &= ~(mask); }
-    void setMaskOfRegisterIfTrue(uint8_t reg, uint8_t mask, bool set);
 };

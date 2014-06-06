@@ -16,7 +16,7 @@
 #include "driverlib/gpio.h"
 #include "driverlib/sysctl.h"
 #include "driverlib/pin_map.h"
-#include "SPI.h"
+#include "SPI_hotfix.h"
 #include "part.h"
 
 #define SSIBASE g_ulSSIBase[SSIModule]

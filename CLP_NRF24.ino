@@ -39,13 +39,13 @@ char recvBuffer[NRF_MAX_PAYLOAD_SIZE];
 void setup()
 {  
   Serial.begin(115200);
-  radio.init(83);
+  radio.init(81);
   
   uint8_t rxaddr[] = {0x01, 0x02, 0x03, 0x02, 0x01 };
   uint8_t txaddr[] = {0x01, 0x02, 0x03, 0x02, 0x01 };
   radio.setRxAddress(PIPE_0, rxaddr);
   radio.setTxAddress(txaddr);
-  radio.enableCRC(0);
+  radio.enableCRC(1);
   radio.enableDataPipe(PIPE_0, true);
   radio.enableShockburst(PIPE_0, false);
   radio.setAddressWidth(5);
@@ -135,7 +135,7 @@ void loop()
     // sending mode
     while(true) {
       char* exampleText = "This text was sent over the air!";
-      Serial.print("Sent: "); Serial.println(exampleText);
+ //     Serial.print("Sent: "); Serial.println(exampleText);
       radio.sendPacket(exampleText, NRF_PAYLOAD_SIZE, false);
       delay(1000); // wait one second 
     }

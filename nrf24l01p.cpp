@@ -1,4 +1,4 @@
-#include "SPI.h"
+#include "SPI_hotfix.h"
 #include "nrf24l01p.h"
 
 void NRF24::csnLow() {
@@ -17,29 +17,27 @@ void NRF24::ceHigh() {
   digitalWrite(CHIP_ENABLE_PIN, HIGH);
 }
 
-void NRF24::readRegister(uint8_t reg, uint8_t* dataIn, uint8_t len) { 
+void NRF24::readRegister(uint8_t reg, void* dataIn, uint8_t len) { 
   csnLow();
   SPI.transfer(CMD_R_REGISTER | (0x1F & reg));
   for(int i = 0; i < len; i++)
-    dataIn[i] = SPI.transfer(0x00);
+    ((uint8_t*)dataIn)[i] = SPI.transfer(0x00);
   csnHigh();
 }
 
-void NRF24::readRegister(uint8_t reg, uint8_t* dataIn) { 
+void NRF24::readRegister(uint8_t reg, void* dataIn) { 
   readRegister(reg, dataIn, 1);
 }
 
-void NRF24::writeRegister(uint8_t reg, uint8_t* dataOut, uint8_t len) {  
+void NRF24::writeRegister(uint8_t reg, void* dataOut, uint8_t len) {  
   csnLow();
-      
   uint8_t status = SPI.transfer(CMD_W_REGISTER  | (0x1F & reg));
   for(int i = 0; i < len; i++)
-    SPI.transfer(dataOut[i]);
-  
+    SPI.transfer(((uint8_t*)dataOut)[i]);
   csnHigh();
 }
 
-void NRF24::writeRegister(uint8_t reg, uint8_t* dataOut) {
+void NRF24::writeRegister(uint8_t reg, void* dataOut) {
   writeRegister(reg, dataOut, 1);
 }
 
@@ -67,104 +65,132 @@ void NRF24::writePayload(uint8_t* payload, uint8_t payloadSize) {
   csnHigh();  
 }
 
-void NRF24::setMaskOfRegisterIfTrue(uint8_t reg, uint8_t mask, bool set) {
-  uint8_t regContent;
-  readRegister(reg, &regContent);
-  
-  if(set)
-    setMask(&regContent, mask);
-  else
-    resetMask(&regContent, mask);
-    
-  writeRegister(reg, &regContent);
-}
-
 bool NRF24::shockburstIsEnabled(uint8_t pipeId) {
-  uint8_t enaa;
+  RegNrf24EN_AA_t enaa;
   readRegister(REG_EN_AA, &enaa);
-  return enaa & (1 << pipeId);
+  
+  switch(pipeId) {
+    case 0: return enaa.enaa_p0;
+    case 1: return enaa.enaa_p1;
+    case 2: return enaa.enaa_p2;
+    case 3: return enaa.enaa_p3;
+    case 4: return enaa.enaa_p4;
+    case 5: return enaa.enaa_p5;
+  }
 }
 
 // NRF24 API
-
 void NRF24::enableCRC(uint8_t numBytes) {
-  uint8_t config;
+  RegNrf24CONFIG_t config;
   readRegister(REG_CONFIG, &config);
-        
+  
   switch(numBytes) {
     case 0:
-      resetMask(&config, EN_CRC);
-      resetMask(&config, CRCO);
+      config.en_crc = 0;
+      config.crco   = 0;
       break;
     case 1:
-      setMask(&config, EN_CRC);
-      resetMask(&config, CRCO);
+      config.en_crc = 1;
+      config.crco   = 0;
       break;
     case 2:
-      setMask(&config, EN_CRC);
-      setMask(&config, CRCO);
+      config.en_crc = 1;
+      config.crco   = 1;
       break;
     default:
       break;
   }
-    
+  
   writeRegister(REG_CONFIG, &config);
 }
 
 void NRF24::powerUp(bool enable) {
-  setMaskOfRegisterIfTrue(REG_CONFIG, PWR_UP, enable);
+  RegNrf24CONFIG_t config;
+  readRegister(REG_CONFIG, &config);
+  config.pwr_up = 1;
+  writeRegister(REG_CONFIG, &config);
 }
 
 void NRF24::listenMode(bool enable) {
   // delay transition between rx and tx must be at least 130us
   // else the chip meight crash.
-  delayMicroseconds(200); 
-  setMaskOfRegisterIfTrue(REG_CONFIG, PRIM_RX, enable);  
+  delayMicroseconds(200);
+  
+  RegNrf24CONFIG_t config;
+  readRegister(REG_CONFIG, &config);
+  config.prim_rx = enable;
+  writeRegister(REG_CONFIG, &config);
+
   digitalWrite(CHIP_ENABLE_PIN, enable ? HIGH : LOW);
 }
 
-
 // EN_AA
-
 void NRF24::enableShockburst(byte pipeId, boolean enable) {
-  setMaskOfRegisterIfTrue(REG_EN_AA, 1 << pipeId, enable);
+  RegNrf24EN_AA_t enaa;
+  readRegister(REG_EN_AA, &enaa);
+  
+  switch(pipeId) {
+    case 0: enaa.enaa_p0 = enable; break;
+    case 1: enaa.enaa_p1 = enable; break;
+    case 2: enaa.enaa_p2 = enable; break;
+    case 3: enaa.enaa_p3 = enable; break;
+    case 4: enaa.enaa_p4 = enable; break;
+    case 5: enaa.enaa_p5 = enable; break;
+  }
+  
+  writeRegister(REG_EN_AA, &enaa);
 }
 
 // EN_RXADDR
 void NRF24::enableDataPipe(byte pipeId, boolean enable) {
-  setMaskOfRegisterIfTrue(REG_EN_RXADDR, 1 << pipeId, enable);
+  RegNrf24EN_RXADDR_t enrxaddr;
+  readRegister(REG_EN_RXADDR, &enrxaddr);
+  
+  switch(pipeId) {
+    case 0: enrxaddr.erx_p0 = enable; break;
+    case 1: enrxaddr.erx_p1 = enable; break;
+    case 2: enrxaddr.erx_p2 = enable; break;
+    case 3: enrxaddr.erx_p3 = enable; break;
+    case 4: enrxaddr.erx_p4 = enable; break;
+    case 5: enrxaddr.erx_p5 = enable; break;
+  }
+  
+  writeRegister(REG_EN_RXADDR, &enrxaddr);
 }
 
 // SETUP_AW
 void NRF24::setAddressWidth(uint8_t numBytes) {
-  uint8_t setupaw = numBytes == 5 ? 3 : numBytes == 4 ? 2 : numBytes == 3 ? 1 : 0;
+  RegNrf24SETUP_AW_t setupaw;
+  setupaw.aw = numBytes - 2;
   writeRegister(REG_SETUP_AW, &setupaw);
 }
 
 // RF_CH
 void NRF24::setRFChannel(uint8_t channel) {
-  writeRegister(REG_RF_CH, &channel);
+  RegNrf24RF_CH_t rfch;
+  rfch.rf_ch = channel;
+  writeRegister(REG_RF_CH, &rfch);
 }
 
 // RF_SETUP
 void NRF24::setDataRate(uint8_t dataRate) {
-  uint8_t rfSetup;
+  RegNrf24RF_SETUP_t rfSetup;
   readRegister(REG_RF_SETUP, &rfSetup);
   
   switch(dataRate) {
     case SPEED_250K:
-      resetMask(&rfSetup, RF_DR_HIGH);
-      setMask(&rfSetup, RF_DR_LOW);
+      rfSetup.rf_dr_low  = 1;
+      rfSetup.rf_dr_high = 0;
       break;
       
     case SPEED_1M:
-      resetMask(&rfSetup, RF_DR_HIGH);
-      resetMask(&rfSetup, RF_DR_LOW);
+      rfSetup.rf_dr_low  = 0;
+      rfSetup.rf_dr_high = 0;
       break;
       
     case SPEED_2M:
-      setMask(&rfSetup, RF_DR_HIGH);
-      resetMask(&rfSetup, RF_DR_LOW);
+      rfSetup.rf_dr_low  = 0;
+      rfSetup.rf_dr_high = 1;   
       break;
       
     default:
@@ -175,26 +201,9 @@ void NRF24::setDataRate(uint8_t dataRate) {
 }
 
 void NRF24::setXmitPower(uint8_t powerLevel) {
-  uint8_t rfSetup;
+  RegNrf24RF_SETUP_t rfSetup;
   readRegister(REG_RF_SETUP, &rfSetup);
-  resetMask(&rfSetup, 3 << 1);
-  
-  switch(powerLevel) {  
-    case RF_PWR_0:
-      break;
-    case RF_PWR_1:
-      setMask(&rfSetup, 1 << 1);
-      break;
-    case RF_PWR_2:
-      setMask(&rfSetup, 2 << 1);
-      break;
-    case RF_PWR_3:
-      setMask(&rfSetup, 3 << 1);
-      break;
-    default:
-      break;
-  }
-  
+  rfSetup.rf_pwr = powerLevel;
   writeRegister(REG_RF_SETUP, &rfSetup);
 }
 
@@ -241,8 +250,6 @@ void NRF24::setPayloadSize(uint8_t pipeId, uint8_t size) {
     case 5: writeRegister(REG_RX_PW_P5, &size); break;
     default: break;
   }
-  
-  writeRegister(REG_RX_PW_P0, &size);
 }
 
 uint8_t NRF24::getRxAddress(uint8_t pipeId, uint8_t* rxAddr) {
@@ -281,27 +288,27 @@ uint8_t NRF24::getTxAddress(uint8_t* txAddr) {
 }
 
 bool NRF24::crcIsEnabled() {
-  uint8_t config;
+  RegNrf24CONFIG_t config;
   readRegister(REG_CONFIG, &config);
-  return config & EN_CRC;
+  return config.en_crc;
 }
 
 uint8_t NRF24::getRFChannel() {
-  uint8_t channel;
-  readRegister(REG_RF_CH, &channel);
-  return channel;
+  RegNrf24RF_CH_t rfch;
+  readRegister(REG_RF_CH, &rfch);
+  return rfch.rf_ch;
 }
 
 uint8_t NRF24::crcGetEncodingScheme() {
-  uint8_t config;
+  RegNrf24CONFIG_t config;
   readRegister(REG_CONFIG, &config);
-  return config & EN_CRC ? config & CRCO ? 2 : 1 :0;
+  return config.en_crc ? config.crco ? 2 : 1 :0;
 }
 
 bool NRF24::isPoweredOn() {
-  uint8_t config;
+  RegNrf24CONFIG_t config;
   readRegister(REG_CONFIG, &config);
-  return config & PWR_UP;
+  return config.pwr_up;;
 }
 
 bool NRF24::dataPipeIsEnabled(uint8_t pipeId) {
@@ -316,28 +323,28 @@ uint8_t NRF24::getAddressWidths() {
   return setupaw == 3 ? 5 : setupaw == 2 ? 4 : setupaw == 1 ? 3 : 0;
 }
 
-uint8_t NRF24::getRxPipe() {
-  uint8_t status;
+uint8_t NRF24::getCurrentRxPipe() {
+  RegNrf24STATUS_t status;
   readRegister(REG_STATUS, &status);
-  return RX_P_NO(status);
+  return status.rx_p_no;
 }
 
 uint8_t NRF24::getDataRate() {
-  uint8_t rfSetup;
+  RegNrf24RF_SETUP_t rfSetup;
   readRegister(REG_RF_SETUP, &rfSetup);
   
-  if(rfSetup & RF_DR_LOW)
+  if(rfSetup.rf_dr_low)
     return SPEED_250K;
-  else if(rfSetup & RF_DR_HIGH)
+  else if(rfSetup.rf_dr_high)
     return SPEED_2M;
   else
     return SPEED_1M;
 }
 
 bool NRF24::isListening() {
-  uint8_t rfConfig;
-  readRegister(REG_CONFIG, &rfConfig);
-  return rfConfig & PRIM_RX;
+  RegNrf24CONFIG_t config;
+  readRegister(REG_CONFIG, &config);
+  return config.prim_rx;
 }
 
 uint8_t NRF24::getPayloadSize(uint8_t pipeId) {
@@ -384,7 +391,7 @@ uint32_t NRF24::recvPacket(void* packet) {
   if(!isPoweredOn())
     return NRF_DEVICE_NOT_POWERED_ON;
   
-  uint8_t pipeId = getRxPipe();
+  uint8_t pipeId = getCurrentRxPipe();
   if(pipeId == RX_P_NO_FIFO_EMPTY)
     return NRF_NO_DATA_AVAILABLE;
   
@@ -392,10 +399,10 @@ uint32_t NRF24::recvPacket(void* packet) {
 }
 
 void NRF24::clearRxInterrupt() {
-  uint8_t rfStatus;
-  readRegister(REG_STATUS, &rfStatus);
-  setMask(&rfStatus, RX_DR);
-  writeRegister(REG_STATUS, &rfStatus);
+  RegNrf24STATUS_t status;
+  readRegister(REG_STATUS, &status);
+  status.rx_dr = 1;
+  writeRegister(REG_STATUS, &status);
 }
 
 void NRF24::flushRxFifo() {  
@@ -423,7 +430,7 @@ int8_t NRF24::sendPacket(void* packet, int8_t payloadSize, bool listenAfterSend)
     listenMode(false);
 
   while(txFifoIsFull());
-  checkForCooldown();  
+  checkForCooldown();
   writePayload((uint8_t*)packet, payloadSize);
   
   // To initially start a transmission, it is important that something in the TX FIFO
@@ -441,15 +448,15 @@ int8_t NRF24::sendPacket(void* packet, int8_t payloadSize, bool listenAfterSend)
 }
 
 bool NRF24::txFifoIsFull() {
-  uint8_t fifostatus;
+  RegNrf24FIFO_STATUS_t fifostatus;
   readRegister(REG_FIFO_STATUS, &fifostatus);
-  return fifostatus & TX_FULL;
+  return fifostatus.tx_full;
 }
 
 bool NRF24::txFifoIsEmpty() {
-  uint8_t fifostatus;
+  RegNrf24FIFO_STATUS_t fifostatus;
   readRegister(REG_FIFO_STATUS, &fifostatus);
-  return fifostatus & TX_EMPTY;
+  return fifostatus.tx_empty;
 }
 
 void NRF24::checkForCooldown() {
