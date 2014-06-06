@@ -4,8 +4,8 @@
 NRF24L01+ library for Connected Launchpad Tiva C
 
 created 09 May 2014
-modified 31 May 2014
-version: 0.85
+modified 06 June 2014
+version: 0.86
 by coon (coon@c-base.org)
 
 SPI Pins: 
@@ -21,7 +21,6 @@ CSN -> PE_1
 
 
 // TODO: 
-// - Refactor from C++ to C
 // - Hardware abstraction layer
 // - Interrupt support
 // - Shockburst
@@ -42,6 +41,10 @@ CSN -> PE_1
 // If you don't let the chip cooldown, it will stop transmitting 
 // sporadicly when sending at maximum speed.
 #define TX_COOLDOWN_TIME 1000000 
+// For some reason the transmitter must not be active for more at 4ms at a time
+// so it has to be set in standby I mode after 4ms beeing active for cooldown.
+static uint32_t txCooldownTimeUs_;
+
 
 // SPI GPIO config (TODO: lay out in HAL)
 #define CHIP_ENABLE_PIN PE_0 // CE
@@ -312,80 +315,68 @@ typedef struct {
   uint8_t            : 5;
 } RegNrf24FEATURE_t;
 
-class NRF24 {
-  public:
-    void init(uint8_t channel);
-    void reset(); // TODO: reset registers to default values
-    void powerUp(bool enable);     // CONFIG
-    void enableCRC(uint8_t numBytes);
-    void listenMode(bool enable);
-    void enableShockburst(byte pipeId, boolean enable); // EN_AA
-    void enableDataPipe(byte pipeId, boolean enable);   // EN_RXADDR
-    void setAddressWidth(uint8_t numBytes);             // SETUP_AW
-    void setRFChannel(uint8_t channel);                 // RF_CH
-    void setDataRate(uint8_t dataRate);                 // RF_SETUP
-    void setXmitPower(uint8_t powerLevel);              // RF_SETUP
-    void setRxAddress(uint8_t* addr);  // TODO: refactor for subaddresses?
-    void setTxAddress(uint8_t* addr);                   // RX_ADDR_P(N)
-    void setPayloadSize(uint8_t pipeId, uint8_t size);  // RX_PW_P0
-    void setRxAddress(uint8_t pipeId, uint8_t* rxAddr); // RX_ADDR_P(N)
-    int8_t sendPacket(void* packet, int8_t payloadSize, bool listenAfterSend = true); // W_TX_PAYLOAD
-    
-    // TODO: SETUP_RETR
 
-    // RF_SETUP
-    // TODO: 
-    //   CONST_WAVE
-    //   RF_DR_LOW
-    //   PLL_LOCK
-    //   RF_PWR
-    
-    // TODO: STATUS
-    // TODO: OBSERVE_TX
-    // TODO: RPD
-    
-    // getters
-    bool crcIsEnabled();  // CONFIG
-    uint8_t crcGetEncodingScheme();
-    bool isPoweredOn();
-    bool shockburstIsEnabled(uint8_t pipeId);
-    bool dataPipeIsEnabled(uint8_t pipeId);   // EN_RXADDR
-    uint8_t getAddressWidths();
-    uint8_t getRxAddress(uint8_t pipeId, uint8_t* rxAddr);
-    uint8_t getTxAddress(uint8_t* txAddr);
-    uint8_t getRFChannel(); // RF_CH
-    uint8_t getCurrentRxPipe(); // STATUS -> RX_P_NO (gets the pipeId of the data on top of the RX fifo. TODO: rename?
-    uint8_t getDataRate();
-    bool isListening();
-    uint8_t getPayloadSize(uint8_t pipeId);
-    uint8_t getPayloadSizeRxFifoTop();
-    uint32_t recvPacket(void* packet);
+void nrf24_init(uint8_t channel);
+void nrf24_reset(); // TODO: reset registers to default values
+void nrf24_powerUp(bool enable);     // CONFIG
+void nrf24_enableCRC(uint8_t numBytes);
+void nrf24_listenMode(bool enable);
+void nrf24_enableShockburst(byte pipeId, boolean enable); // EN_AA
+void nrf24_enableDataPipe(byte pipeId, boolean enable);   // EN_RXADDR
+void nrf24_setAddressWidth(uint8_t numBytes);             // SETUP_AW
+void nrf24_setRFChannel(uint8_t channel);                 // RF_CH
+void nrf24_setDataRate(uint8_t dataRate);                 // RF_SETUP
+void nrf24_setXmitPower(uint8_t powerLevel);              // RF_SETUP
+void nrf24_setRxAddress(uint8_t* addr);  // TODO: refactor for subaddresses?
+void nrf24_setTxAddress(uint8_t* addr);                   // RX_ADDR_P(N)
+void nrf24_setPayloadSize(uint8_t pipeId, uint8_t size);  // RX_PW_P0
+void nrf24_setRxAddress(uint8_t pipeId, uint8_t* rxAddr); // RX_ADDR_P(N)
+int8_t nrf24_sendPacket(void* packet, int8_t payloadSize, bool listenAfterSend = true); // W_TX_PAYLOAD
 
-    void flushRxFifo(); // Will drop ALL elements from the RX FIFO
-    void flushTxFifo(); // Will drop ALL elements from the TX FIFO
-    bool txFifoIsFull(); // FIFO_STATUS
-    bool txFifoIsEmpty(); // FIFO_STATUS
-    
-  private:
-    // For some reason the transmitter must not be active for more at 4ms at a time
-    // so it has to be set in standby I mode after 4ms beeing active for cooldown.
-    uint32_t txTimeUs_;
-    void checkForCooldown();
-  
-    void csnLow();
-    void csnHigh();  
-    void ceLow();
-    void ceHigh();
-    
-    // register access
-    void readRegister(uint8_t reg, void* dataIn);
-    void readRegister(uint8_t reg, void* dataIn, uint8_t len);
-    void writeRegister(uint8_t reg, void* dataOut);
-    void writeRegister(uint8_t reg, void* dataOut, uint8_t len);
-    
-    void clearRxInterrupt();
+// TODO: SETUP_RETR
 
-    // payload
-    int8_t readPayload(uint8_t* payload);
-    void writePayload(uint8_t* payload, uint8_t payloadSize);
-};
+// RF_SETUP
+// TODO: 
+//   CONST_WAVE
+//   RF_DR_LOW
+//   PLL_LOCK
+//   RF_PWR
+
+// TODO: STATUS
+// TODO: OBSERVE_TX
+// TODO: RPD
+
+// getters
+bool nrf24_crcIsEnabled();  // CONFIG
+uint8_t nrf24_crcGetEncodingScheme();
+bool nrf24_isPoweredOn();
+bool nrf24_shockburstIsEnabled(uint8_t pipeId);
+bool nrf24_dataPipeIsEnabled(uint8_t pipeId);   // EN_RXADDR
+uint8_t nrf24_getAddressWidths();
+uint8_t nrf24_getRxAddress(uint8_t pipeId, uint8_t* rxAddr);
+uint8_t nrf24_getTxAddress(uint8_t* txAddr);
+uint8_t nrf24_getRFChannel(); // RF_CH
+uint8_t nrf24_getCurrentRxPipe(); // STATUS -> RX_P_NO (gets the pipeId of the data on top of the RX fifo. TODO: rename?
+uint8_t nrf24_getDataRate();
+bool nrf24_isListening();
+uint32_t nrf24_recvPacket(void* packet);
+uint8_t nrf24_getPayloadSize(uint8_t pipeId);
+uint8_t nrf24_getPayloadSizeRxFifoTop();
+void nrf24_flushRxFifo(); // Will drop ALL elements from the RX FIFO
+void nrf24_flushTxFifo(); // Will drop ALL elements from the TX FIFO
+bool nrf24_txFifoIsFull(); // FIFO_STATUS
+bool nrf24_txFifoIsEmpty(); // FIFO_STATUS
+
+static void checkForCooldown();
+static void csnLow();
+static void csnHigh();  
+static void ceLow();
+static void ceHigh();
+static void readRegister(uint8_t reg, void* dataIn); // register access
+static void readRegister(uint8_t reg, void* dataIn, uint8_t len);
+static void writeRegister(uint8_t reg, void* dataOut);
+static void writeRegister(uint8_t reg, void* dataOut, uint8_t len);
+static void clearRxInterrupt(); // interrupts
+static int8_t readPayload(uint8_t* payload); // payload
+static void writePayload(uint8_t* payload, uint8_t payloadSize);
+
