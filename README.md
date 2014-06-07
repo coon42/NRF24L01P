@@ -17,6 +17,7 @@ Features:
 ---------
 - Support for following devices so far:
   - TM4C1294XL (Texas Instruments Tiva C Connected Launchpad)
+  - STM32F4Discovery
 
 - All six pipes are fully supported.
 - High performance transmission. (~200KB/s @ 2Mbit mode)
@@ -25,7 +26,6 @@ Features:
 Todo:
 -----
 - Auto model detection (NRF24L01+ or NRF24L01)
-- Adding a hardware abstraction layer for better portability
 - Shockburst (Auto retransmission feature)
 - Dynamic payloads
 - Interrupt support

@@ -1,7 +1,7 @@
 #ifndef NRF24L01P_H
 #define NRF24L01P_H
 
-#include "hal_energia.h"
+#include "hal_stm32f4.h"
 
 /*
 Platform independent NRF24L01+ library
@@ -22,10 +22,12 @@ by coon (coon@c-base.org)
 // to be done every 4ms but one second seems also to work. 
 // If you don't let the chip cooldown, it will stop transmitting 
 // sporadicly when sending at maximum speed.
-#define TX_COOLDOWN_TIME 1000000 
+#define TX_COOLDOWN_TIME 1000
 // For some reason the transmitter must not be active for more at 4ms at a time
 // so it has to be set in standby I mode after 4ms beeing active for cooldown.
-static uint32_t txCooldownTimeUs_;
+static uint32_t txCooldownTimeMs_;
+#define TRUE 1
+#define FALSE 0
 
 // custom errors (TODO: make a higher NRF layer?) 
 #define NRF_OK 0;
@@ -34,6 +36,7 @@ static uint32_t txCooldownTimeUs_;
 #define NRF_INVALID_PAYLOAD_SIZE -3
 
 // Constants
+enum {NRF_SENDER = 0, NRF_RECEIVER = 1};
 #define NRF_MAX_PAYLOAD_SIZE 32
 #define PIPE_0 0
 #define PIPE_1 1
@@ -83,6 +86,7 @@ static uint32_t txCooldownTimeUs_;
 #define REG_DYNPD                0x1C
 #define REG_FEATURE              0x1D
 
+
 // Register structures
 typedef struct {
   uint8_t prim_rx     : 1;
@@ -94,6 +98,10 @@ typedef struct {
   uint8_t mask_rx_dr  : 1;  
   uint8_t             : 1; // reserved
 } RegNrf24CONFIG_t;
+
+enum {CRC_MODE_OFF    = 0,
+	  CRC_MODE_1_BYTE = 1,
+	  CRC_MODE_2_BYTE = 2};
 
 typedef struct {
   uint8_t enaa_p0 : 1;
@@ -176,7 +184,7 @@ typedef struct {
   uint8_t pll_lock   : 1;
   uint8_t rf_dr_low  : 1; // only on NRF24L01
   uint8_t            : 1; // reserved
-  uint8_t cont_wave  : 1; // only on NRF24L01
+  uint8_t cont_wave  : 1;  // only on NRF24L01
 } RegNrf24RF_SETUP_t;
 
 // Data Rates
@@ -294,20 +302,19 @@ typedef struct {
 
 void nrf24_init(uint8_t channel);
 void nrf24_reset(); // TODO: reset registers to default values
-void nrf24_powerUp(bool enable);
+void nrf24_powerUp(uint8_t enable);
 void nrf24_enableCRC(uint8_t numBytes);
-void nrf24_listenMode(bool enable);
-void nrf24_enableShockburst(byte pipeId, boolean enable);
-void nrf24_enableDataPipe(byte pipeId, boolean enable);
+void nrf24_listenMode(uint8_t enable);
+void nrf24_enableShockburst(uint8_t pipeId, uint8_t enable);
+void nrf24_enableDataPipe(uint8_t pipeId, uint8_t enable);
 void nrf24_setAddressWidth(uint8_t numBytes);
 void nrf24_setRFChannel(uint8_t channel);
 void nrf24_setDataRate(uint8_t dataRate);
 void nrf24_setXmitPower(uint8_t powerLevel);
-void nrf24_setRxAddress(uint8_t* addr); // TODO: refactor for subaddresses?
 void nrf24_setTxAddress(uint8_t* addr);
 void nrf24_setPayloadSize(uint8_t pipeId, uint8_t size);
-void nrf24_setRxAddress(uint8_t pipeId, uint8_t* rxAddr);
-int8_t nrf24_sendPacket(void* packet, int8_t payloadSize, bool listenAfterSend = true);
+void nrf24_setRxAddress(uint8_t pipeId, uint8_t* rxAddr); // TODO: refactor for subaddresses?
+int8_t nrf24_sendPacket(void* packet, int8_t payloadSize, uint8_t listenAfterSend);
 
 // TODO: SETUP_RETR
 // RF_SETUP
@@ -316,30 +323,30 @@ int8_t nrf24_sendPacket(void* packet, int8_t payloadSize, bool listenAfterSend =
 //   PLL_LOCK
 
 // getters
-bool nrf24_crcIsEnabled();
+uint8_t nrf24_crcIsEnabled();
 uint8_t nrf24_crcGetEncodingScheme();
-bool nrf24_isPoweredOn();
-bool nrf24_shockburstIsEnabled(uint8_t pipeId);
-bool nrf24_dataPipeIsEnabled(uint8_t pipeId);
+uint8_t nrf24_isPoweredOn();
+uint8_t nrf24_shockburstIsEnabled(uint8_t pipeId);
+uint8_t nrf24_dataPipeIsEnabled(uint8_t pipeId);
 uint8_t nrf24_getAddressWidths();
 uint8_t nrf24_getRxAddress(uint8_t pipeId, uint8_t* rxAddr);
 uint8_t nrf24_getTxAddress(uint8_t* txAddr);
 uint8_t nrf24_getRFChannel();
 uint8_t nrf24_getCurrentRxPipe(); // STATUS -> RX_P_NO (gets the pipeId of the data on top of the RX fifo. TODO: rename?
 uint8_t nrf24_getDataRate();
-bool nrf24_isListening();
+uint8_t nrf24_isListening();
 uint32_t nrf24_recvPacket(void* packet);
 uint8_t nrf24_getPayloadSize(uint8_t pipeId);
 uint8_t nrf24_getPayloadSizeRxFifoTop();
 void nrf24_flushRxFifo(); // Will drop ALL elements from the RX FIFO
 void nrf24_flushTxFifo(); // Will drop ALL elements from the TX FIFO
-bool nrf24_txFifoIsFull();
-bool nrf24_txFifoIsEmpty();
+uint8_t nrf24_txFifoIsFull();
+uint8_t nrf24_txFifoIsEmpty();
 
 static void checkForCooldown();
-static void readRegister(uint8_t reg, void* dataIn);
+static void readRegisterB(uint8_t reg, void* dataIn);
 static void readRegister(uint8_t reg, void* dataIn, uint8_t len);
-static void writeRegister(uint8_t reg, void* dataOut);
+static void writeRegisterB(uint8_t reg, void* dataOut);
 static void writeRegister(uint8_t reg, void* dataOut, uint8_t len);
 static void clearRxInterrupt();
 static int8_t readPayload(uint8_t* payload);
