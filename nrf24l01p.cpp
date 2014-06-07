@@ -1,27 +1,11 @@
-#include "SPI_hotfix.h"
 #include "nrf24l01p.h"
 
-void csnLow() {
-  digitalWrite(CHIP_SELECT_PIN, LOW);
-}
-
-void csnHigh() {
-  digitalWrite(CHIP_SELECT_PIN, HIGH);
-}
-
-void ceLow() {
-  digitalWrite(CHIP_ENABLE_PIN, LOW);
-}
-
-void ceHigh() {
-  digitalWrite(CHIP_ENABLE_PIN, HIGH);
-}
 
 void readRegister(uint8_t reg, void* dataIn, uint8_t len) { 
   csnLow();
-  SPI.transfer(CMD_R_REGISTER | (0x1F & reg));
+  spiXmitByte(CMD_R_REGISTER | (0x1F & reg));
   for(int i = 0; i < len; i++)
-    ((uint8_t*)dataIn)[i] = SPI.transfer(0x00);
+    ((uint8_t*)dataIn)[i] = spiXmitByte(0x00);
   csnHigh();
 }
 
@@ -31,9 +15,9 @@ void readRegister(uint8_t reg, void* dataIn) {
 
 void writeRegister(uint8_t reg, void* dataOut, uint8_t len) {  
   csnLow();
-  uint8_t status = SPI.transfer(CMD_W_REGISTER  | (0x1F & reg));
+  uint8_t status = spiXmitByte(CMD_W_REGISTER  | (0x1F & reg));
   for(int i = 0; i < len; i++)
-    SPI.transfer(((uint8_t*)dataOut)[i]);
+    spiXmitByte(((uint8_t*)dataOut)[i]);
   csnHigh();
 }
 
@@ -48,9 +32,9 @@ int8_t readPayload(uint8_t* payload) {
     nrf24_flushRxFifo(); // datasheet page 51 says, this is necessary
 
   csnLow();
-  SPI.transfer(CMD_R_RX_PAYLOAD);
+  spiXmitByte(CMD_R_RX_PAYLOAD);
   for(int i = 0; i < payloadSize; i++)
-    payload[i] = SPI.transfer(0x00);  
+    payload[i] = spiXmitByte(0x00);  
   csnHigh();
   clearRxInterrupt();
   
@@ -59,9 +43,9 @@ int8_t readPayload(uint8_t* payload) {
 
 void writePayload(uint8_t* payload, uint8_t payloadSize) {
   csnLow();
-  SPI.transfer(CMD_W_TX_PAYLOAD);
+  spiXmitByte(CMD_W_TX_PAYLOAD);
   for(int i = 0; i < payloadSize; i++)
-    SPI.transfer(payload[i]);
+    spiXmitByte(payload[i]);
   csnHigh();  
 }
 
@@ -380,8 +364,8 @@ uint8_t nrf24_getPayloadSizeRxFifoTop() {
   uint8_t size;
   
   csnLow();
-  SPI.transfer(CMD_R_RX_PL_WID);
-  size = SPI.transfer(0x00);
+  spiXmitByte(CMD_R_RX_PL_WID);
+  size = spiXmitByte(0x00);
   csnHigh();
   
   return size;
@@ -398,7 +382,7 @@ uint32_t nrf24_recvPacket(void* packet) {
   return readPayload((uint8_t*)packet);
 }
 
-void nrf24_clearRxInterrupt() {
+void clearRxInterrupt() {
   RegNrf24STATUS_t status;
   readRegister(REG_STATUS, &status);
   status.rx_dr = 1;
@@ -407,16 +391,14 @@ void nrf24_clearRxInterrupt() {
 
 void nrf24_flushRxFifo() {  
   csnLow();
-  SPI.transfer(CMD_FLUSH_RX);
+  spiXmitByte(CMD_FLUSH_RX);
   csnHigh();
-  NRFDBG("NRFDBG: RX FIFO FLUSHED!")
 }
 
 void nrf24_flushTxFifo() {
   csnLow();
-  SPI.transfer(CMD_FLUSH_TX);
+  spiXmitByte(CMD_FLUSH_TX);
   csnHigh();
-  NRFDBG("NRFDBG: TX FIFO FLUSHED!")
 }
 
 int8_t nrf24_sendPacket(void* packet, int8_t payloadSize, bool listenAfterSend) {
@@ -470,7 +452,7 @@ void checkForCooldown() {
 }
 
 void nrf24_init(uint8_t channel) {
-  SPI.begin();
+  spiInit();
   
   pinMode(CHIP_ENABLE_PIN, OUTPUT);
   pinMode(CHIP_SELECT_PIN, OUTPUT);
