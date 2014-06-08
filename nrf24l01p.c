@@ -1,9 +1,10 @@
 #include "nrf24l01p.h"
 
-void readRegister(uint8_t reg, void* dataIn, uint8_t len) { 
+void readRegister(uint8_t reg, void* dataIn, uint8_t len) {
+  int i;
   csnLow();
   spiXmitByte(CMD_R_REGISTER | (0x1F & reg));
-  for(int i = 0; i < len; i++)
+  for(i = 0; i < len; i++)
     ((uint8_t*)dataIn)[i] = spiXmitByte(0x00);
   csnHigh();
 }
@@ -12,10 +13,11 @@ void readRegisterB(uint8_t reg, void* dataIn) {
   readRegister(reg, dataIn, 1);
 }
 
-void writeRegister(uint8_t reg, void* dataOut, uint8_t len) {  
+void writeRegister(uint8_t reg, void* dataOut, uint8_t len) {
+  int i;
   csnLow();
   uint8_t status = spiXmitByte(CMD_W_REGISTER  | (0x1F & reg));
-  for(int i = 0; i < len; i++)
+  for(i = 0; i < len; i++)
     spiXmitByte(((uint8_t*)dataOut)[i]);
   csnHigh();
 }
@@ -25,25 +27,27 @@ void writeRegisterB(uint8_t reg, void* dataOut) {
 }
 
 int8_t readPayload(uint8_t* payload) {
+  int i;
   uint8_t payloadSize = nrf24_getPayloadSizeRxFifoTop();
-  
-  if(payloadSize > 32) 
+
+  if(payloadSize > 32)
     nrf24_flushRxFifo(); // datasheet page 51 says, this is necessary
 
   csnLow();
   spiXmitByte(CMD_R_RX_PAYLOAD);
-  for(int i = 0; i < payloadSize; i++)
-    payload[i] = spiXmitByte(0x00);  
+  for(i = 0; i < payloadSize; i++)
+    payload[i] = spiXmitByte(0x00);
   csnHigh();
   clearRxInterrupt();
-  
+
   return payloadSize;
 }
 
 void writePayload(uint8_t* payload, uint8_t payloadSize) {
+  int i;
   csnLow();
   spiXmitByte(CMD_W_TX_PAYLOAD);
-  for(int i = 0; i < payloadSize; i++)
+  for(i = 0; i < payloadSize; i++)
     spiXmitByte(payload[i]);
   csnHigh();  
 }
@@ -406,17 +410,17 @@ void nrf24_flushTxFifo() {
 int8_t nrf24_sendPacket(void* packet, int8_t payloadSize, uint8_t listenAfterSend) {
   if(!nrf24_isPoweredOn())
     return NRF_DEVICE_NOT_POWERED_ON;
-    
+
   if(payloadSize < 1 || payloadSize > 32)
     return NRF_INVALID_PAYLOAD_SIZE;
-  
+
   if(nrf24_isListening())
     nrf24_listenMode(FALSE);
 
   while(nrf24_txFifoIsFull());
   checkForCooldown();
   writePayload((uint8_t*)packet, payloadSize);
-  
+
   // To initially start a transmission, it is important that something in the TX FIFO
   // before pulling the chip enable pin high. If chip enable is already set when the payload is empty, 
   // the transmission will NOT be initiated before ce got pulled low and high again!   
@@ -427,7 +431,7 @@ int8_t nrf24_sendPacket(void* packet, int8_t payloadSize, uint8_t listenAfterSen
 
   if(listenAfterSend)
     nrf24_listenMode(TRUE);
-  
+
   return NRF_OK;
 }
 
@@ -453,12 +457,18 @@ void checkForCooldown() {
     }
 }
 
+uint8_t nrf24_carrierIsPresent() {
+  RegNrf24RPD_t rpd;
+  readRegisterB(REG_RPD, &rpd);
+  return rpd.rpd;
+}
+
 void nrf24_init(uint8_t channel) {
   spiInit();
   gpioInit();
-  
+
   txCooldownTimeMs_ = 0;
-  nrf24_flushTxFifo();   
+  nrf24_flushTxFifo();
   nrf24_flushRxFifo();
   nrf24_setRFChannel(channel);
   nrf24_listenMode(TRUE);

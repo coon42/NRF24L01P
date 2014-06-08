@@ -1,17 +1,17 @@
-#ifndef HAL_ENERGIA_H
-#define HAL_ENERGIA_H
+#ifndef HAL_NRF24L01P_H
+#define HAL_NRF24L01P_H
 
-#include "SPI_hotfix.h"
-
-// SPI GPIO config (TODO: lay out in HAL)
-#define CHIP_ENABLE_PIN PE_0 // CE
-#define CHIP_SELECT_PIN PE_1 // CSN
+#include "Energia.h"
 
 void csnLow();
 void csnHigh();
 void ceLow();
 void ceHigh();
+uint8_t getCe();
+void gpioInit();
+uint32_t getTickMillis();
 uint8_t spiXmitByte(uint8_t value);
 void spiInit();
+void delayUs(uint32_t microseconds);
 
-#endif /* HAL_ENERGIA_H */
+#endif /* HAL_H */
