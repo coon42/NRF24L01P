@@ -3,19 +3,17 @@
 
 #include "hal_stm32f4.h"
 
-/*
-Platform independent NRF24L01+ library
+// Platform independent NRF24L01+ library
 
-created 09 May 2014
-modified 07 June 2014
-version: 0.87
-by coon (coon@c-base.org)
+// created 09 May 2014
+// modified 04 January 2017
+// version: 0.87
+// by coon (coon@c-base.org)
 
 // TODO:
 // - Interrupt support
 // - Shockburst
 // - Low energy stuff
-*/
 
 // Every second the transmitter will be set to standby-I mode 
 // for a short time to cooldown. The datasheet days this has 
@@ -23,6 +21,7 @@ by coon (coon@c-base.org)
 // If you don't let the chip cooldown, it will stop transmitting 
 // sporadicly when sending at maximum speed.
 #define TX_COOLDOWN_TIME 1000
+
 // For some reason the transmitter must not be active for more at 4ms at a time
 // so it has to be set in standby I mode after 4ms beeing active for cooldown.
 static uint32_t txCooldownTimeMs_;
@@ -99,9 +98,11 @@ typedef struct {
   uint8_t             : 1; // reserved
 } RegNrf24CONFIG_t;
 
-enum {CRC_MODE_OFF    = 0,
-	  CRC_MODE_1_BYTE = 1,
-	  CRC_MODE_2_BYTE = 2};
+enum {
+	CRC_MODE_OFF    = 0,
+	CRC_MODE_1_BYTE = 1,
+	CRC_MODE_2_BYTE = 2
+};
 
 typedef struct {
   uint8_t enaa_p0 : 1;
@@ -128,48 +129,54 @@ typedef struct {
   uint8_t    : 6;
 } RegNrf24SETUP_AW_t;
 
-enum {AW_3BYTES  = 0x01, 
-      AW_4BYTES  = 0x02,
-      AW_5BYTES  = 0x03};
+enum {
+	AW_3BYTES  = 0x01, 
+	AW_4BYTES  = 0x02,
+	AW_5BYTES  = 0x03
+};
 
 typedef struct {
   uint8_t arc : 4;
   uint8_t ard : 4;
 } RegNrf24SETUP_RETR_t;
 
-enum {ARD_RT_DELAY_250US   = 0x00,
-      ARD_RT_DELAY_500US   = 0x01,
-      ARD_RT_DELAY_750US   = 0x02,
-      ARD_RT_DELAY_1000US  = 0x03,
-      ARD_RT_DELAY_1250US  = 0x04,
-      ARD_RT_DELAY_1500US  = 0x05,
-      ARD_RT_DELAY_1750US  = 0x06,
-      ARD_RT_DELAY_2000US  = 0x07,
-      ARD_RT_DELAY_2250US  = 0x08,
-      ARD_RT_DELAY_2500US  = 0x09,
-      ARD_RT_DELAY_2750US  = 0x0A,
-      ARD_RT_DELAY_3000US  = 0x0B,
-      ARD_RT_DELAY_3250US  = 0x0C,
-      ARD_RT_DELAY_3500US  = 0x0D,
-      ARD_RT_DELAY_3750US  = 0x0E,
-      ARD_RT_DELAY_4000US  = 0x0F};
+enum {
+  ARD_RT_DELAY_250US   = 0x00,    
+  ARD_RT_DELAY_500US   = 0x01,
+  ARD_RT_DELAY_750US   = 0x02,
+  ARD_RT_DELAY_1000US  = 0x03,
+  ARD_RT_DELAY_1250US  = 0x04,
+  ARD_RT_DELAY_1500US  = 0x05,
+  ARD_RT_DELAY_1750US  = 0x06,
+  ARD_RT_DELAY_2000US  = 0x07,
+  ARD_RT_DELAY_2250US  = 0x08,
+  ARD_RT_DELAY_2500US  = 0x09,
+  ARD_RT_DELAY_2750US  = 0x0A,
+  ARD_RT_DELAY_3000US  = 0x0B,
+  ARD_RT_DELAY_3250US  = 0x0C,
+  ARD_RT_DELAY_3500US  = 0x0D,
+  ARD_RT_DELAY_3750US  = 0x0E,
+  ARD_RT_DELAY_4000US  = 0x0F
+};
 
-enum {ARC_RT_DISABLED  = 0x00,
-      ARD_RT_COUNT_1   = 0x01,
-      ARD_RT_COUNT_2   = 0x02,
-      ARD_RT_COUNT_3   = 0x03,
-      ARD_RT_COUNT_4   = 0x04,
-      ARD_RT_COUNT_5   = 0x05,
-      ARD_RT_COUNT_6   = 0x06,
-      ARD_RT_COUNT_7   = 0x07,
-      ARD_RT_COUNT_8   = 0x08,
-      ARD_RT_COUNT_9   = 0x09,
-      ARD_RT_COUNT_10  = 0x0A,
-      ARD_RT_COUNT_11  = 0x0B,
-      ARD_RT_COUNT_12  = 0x0C,
-      ARD_RT_COUNT_13  = 0x0D,
-      ARD_RT_COUNT_14  = 0x0E,
-      ARD_RT_COUNT_15  = 0x0F};
+enum {
+	ARC_RT_DISABLED  = 0x00,
+  ARD_RT_COUNT_1   = 0x01,
+  ARD_RT_COUNT_2   = 0x02,
+  ARD_RT_COUNT_3   = 0x03,
+  ARD_RT_COUNT_4   = 0x04,
+  ARD_RT_COUNT_5   = 0x05,
+  ARD_RT_COUNT_6   = 0x06,
+  ARD_RT_COUNT_7   = 0x07,
+  ARD_RT_COUNT_8   = 0x08,
+  ARD_RT_COUNT_9   = 0x09,
+  ARD_RT_COUNT_10  = 0x0A,
+  ARD_RT_COUNT_11  = 0x0B,
+  ARD_RT_COUNT_12  = 0x0C,
+  ARD_RT_COUNT_13  = 0x0D,
+  ARD_RT_COUNT_14  = 0x0E,
+  ARD_RT_COUNT_15  = 0x0F
+};
 
 typedef struct {
   uint8_t rf_ch : 7;
@@ -188,11 +195,18 @@ typedef struct {
 } RegNrf24RF_SETUP_t;
 
 // Data Rates
-enum { SPEED_250K = 0, SPEED_1M = 1, SPEED_2M = 2 };
-enum { RF_PWR_0 = 0x00,
-       RF_PWR_1 = 0x01,
-       RF_PWR_2 = 0x02,
-       RF_PWR_3 = 0x03 };
+enum { 
+	SPEED_250K = 0, 
+	SPEED_1M   = 1, 
+	SPEED_2M   = 2 
+};
+
+enum { 
+	RF_PWR_0 = 0x00,
+	RF_PWR_1 = 0x01,
+	RF_PWR_2 = 0x02,
+	RF_PWR_3 = 0x03 
+};
 
 typedef struct {
   uint8_t tx_full : 1;
@@ -202,7 +216,10 @@ typedef struct {
   uint8_t rx_dr   : 1;
   uint8_t         : 1;
 } RegNrf24STATUS_t;
-enum { RX_P_NO_FIFO_EMPTY = 0x07 };
+
+enum { 
+	X_P_NO_FIFO_EMPTY = 0x07 
+};
 
 typedef struct {
   uint8_t arc_cnt  : 4;
@@ -299,7 +316,6 @@ typedef struct {
   uint8_t            : 5;
 } RegNrf24FEATURE_t;
 
-
 void nrf24_init(uint8_t channel);
 void nrf24_reset(); // TODO: reset registers to default values
 void nrf24_powerUp(uint8_t enable);
@@ -352,4 +368,5 @@ static void clearRxInterrupt();
 static int8_t readPayload(uint8_t* payload);
 static void writePayload(uint8_t* payload, uint8_t payloadSize);
 
-#endif /* NRF24L01P */
+#endif // NRF24L01P_H
+

@@ -4,8 +4,10 @@ void readRegister(uint8_t reg, void* dataIn, uint8_t len) {
   int i;
   csnLow();
   spiXmitByte(CMD_R_REGISTER | (0x1F & reg));
+
   for(i = 0; i < len; i++)
     ((uint8_t*)dataIn)[i] = spiXmitByte(0x00);
+
   csnHigh();
 }
 
@@ -17,8 +19,10 @@ void writeRegister(uint8_t reg, void* dataOut, uint8_t len) {
   int i;
   csnLow();
   uint8_t status = spiXmitByte(CMD_W_REGISTER  | (0x1F & reg));
+
   for(i = 0; i < len; i++)
     spiXmitByte(((uint8_t*)dataOut)[i]);
+
   csnHigh();
 }
 
@@ -35,8 +39,10 @@ int8_t readPayload(uint8_t* payload) {
 
   csnLow();
   spiXmitByte(CMD_R_RX_PAYLOAD);
+
   for(i = 0; i < payloadSize; i++)
     payload[i] = spiXmitByte(0x00);
+
   csnHigh();
   clearRxInterrupt();
 
@@ -47,8 +53,10 @@ void writePayload(uint8_t* payload, uint8_t payloadSize) {
   int i;
   csnLow();
   spiXmitByte(CMD_W_TX_PAYLOAD);
+
   for(i = 0; i < payloadSize; i++)
     spiXmitByte(payload[i]);
+
   csnHigh();  
 }
 
@@ -225,7 +233,6 @@ void nrf24_setRxAddress(uint8_t pipeId, uint8_t* rxAddr) {
   }
 }
 
-
 void nrf24_setTxAddress(uint8_t* addr) {
   writeRegister(REG_TX_ADDR, addr, 5);
 }
@@ -280,42 +287,49 @@ uint8_t nrf24_getTxAddress(uint8_t* txAddr) {
 uint8_t nrf24_crcIsEnabled() {
   RegNrf24CONFIG_t config;
   readRegisterB(REG_CONFIG, &config);
+
   return config.en_crc;
 }
 
 uint8_t nrf24_getRFChannel() {
   RegNrf24RF_CH_t rfch;
   readRegisterB(REG_RF_CH, &rfch);
+
   return rfch.rf_ch;
 }
 
 uint8_t nrf24_crcGetEncodingScheme() {
   RegNrf24CONFIG_t config;
   readRegisterB(REG_CONFIG, &config);
+
   return config.en_crc ? config.crco ? 2 : 1 :0;
 }
 
 uint8_t nrf24_isPoweredOn() {
   RegNrf24CONFIG_t config;
   readRegisterB(REG_CONFIG, &config);
+
   return config.pwr_up;;
 }
 
 uint8_t nrf24_dataPipeIsEnabled(uint8_t pipeId) {
   uint8_t rxaddr;
   readRegisterB(REG_EN_RXADDR, &rxaddr);
+
   return rxaddr & (1 << pipeId);
 }
 
 uint8_t nrf24_getAddressWidths() {
   uint8_t setupaw;
   readRegisterB(REG_SETUP_AW, &setupaw);
+
   return setupaw == 3 ? 5 : setupaw == 2 ? 4 : setupaw == 1 ? 3 : 0;
 }
 
 uint8_t nrf24_getCurrentRxPipe() {
   RegNrf24STATUS_t status;
   readRegisterB(REG_STATUS, &status);
+
   return status.rx_p_no;
 }
 
@@ -334,6 +348,7 @@ uint8_t nrf24_getDataRate() {
 uint8_t nrf24_isListening() {
   RegNrf24CONFIG_t config;
   readRegisterB(REG_CONFIG, &config);
+
   return config.prim_rx;
 }
 
@@ -438,12 +453,14 @@ int8_t nrf24_sendPacket(void* packet, int8_t payloadSize, uint8_t listenAfterSen
 uint8_t nrf24_txFifoIsFull() {
   RegNrf24FIFO_STATUS_t fifostatus;
   readRegisterB(REG_FIFO_STATUS, &fifostatus);
+
   return fifostatus.tx_full;
 }
 
 uint8_t nrf24_txFifoIsEmpty() {
   RegNrf24FIFO_STATUS_t fifostatus;
   readRegisterB(REG_FIFO_STATUS, &fifostatus);
+
   return fifostatus.tx_empty;
 }
 
@@ -460,6 +477,7 @@ void checkForCooldown() {
 uint8_t nrf24_carrierIsPresent() {
   RegNrf24RPD_t rpd;
   readRegisterB(REG_RPD, &rpd);
+
   return rpd.rpd;
 }
 
@@ -473,3 +491,4 @@ void nrf24_init(uint8_t channel) {
   nrf24_setRFChannel(channel);
   nrf24_listenMode(TRUE);
 }
+
