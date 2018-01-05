@@ -15,14 +15,18 @@ void init();
 void calculation_test();
 void dac_test();
 
-// This will print on usart 1 (the original function has been commented out in printf.c !!!
-int printUart(int ch) {
-  // Wait until transmit finishes
+int sendUartChar(char ch) {
   while (USART_GetFlagStatus(USART1, USART_FLAG_TXE) == RESET);
+  USART_SendData(USART1, ch);
 
-  // Transmit the character using USART1
-  USART_SendData(USART1, (u8) ch);
   return ch;
+}
+
+void sendUartText(const char* pText) {
+  const char* p = pText;
+
+  for(int i = 0; pText[i]; i++)
+		sendUartChar(pText[i]);
 }
 
 int main(void) {
@@ -32,7 +36,7 @@ int main(void) {
     GPIO_SetBits(GPIOD, GPIO_Pin_12);
     Delay(500);
 
-    printUart("Q");
+    sendUartText("warum funktioniert das jetzt???\n");
 
     GPIO_ResetBits(GPIOD, GPIO_Pin_12);
     Delay(500);
@@ -100,10 +104,6 @@ void init() {
   GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
   GPIO_Init(GPIOD, &GPIO_InitStructure);
 
-  // ------ UART ------ //
-
-  initDebugUart(115200);
-
   // ---------- DAC ---------- //
 
   // Clock
@@ -127,6 +127,9 @@ void init() {
 
   // Set DAC Channel1 DHR12L register
   DAC_SetChannel1Data(DAC_Align_12b_R, 0);
+
+  // ------ UART ------ //
+  initDebugUart(115200);
 }
 
 // Called from systick handler
