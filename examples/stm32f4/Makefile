@@ -89,7 +89,7 @@ $(OBJDIR)/libnrf24.a: $(NRF_OBJS)
 	$(AR) -r $@ $(NRF_OBJS)
 
 $(OUTPATH)/$(PROJ_NAME).elf: $(OBJDIR)/libstm32f4.a $(OBJDIR)/libnrf24.a $(MAIN_OBJS)
-	$(CC) $(CFLAGS) $^ -o $@ -L. -Lobj -lstm32f4 -lm
+	$(CC) $(CFLAGS) $^ -o $@ -L. -Lobj -lstm32f4 -lnrf24 -lm
 	$(OBJCOPY) -O ihex $(OUTPATH)/$(PROJ_NAME).elf $(OUTPATH)/$(PROJ_NAME).hex
 	$(OBJCOPY) -O binary $(OUTPATH)/$(PROJ_NAME).elf $(OUTPATH)/$(PROJ_NAME).bin
 	$(SIZE) $@

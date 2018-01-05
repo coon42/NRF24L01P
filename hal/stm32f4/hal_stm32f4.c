@@ -1,4 +1,5 @@
 #include "nrf24_hal.h"
+#include "stm32f4xx.h"
 #include "stm32f4xx_conf.h"
 
 #define CHIP_SELECT_PIN GPIO_Pin_7
