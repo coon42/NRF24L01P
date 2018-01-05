@@ -4,6 +4,7 @@
 #include <math.h>
 #include "stm32f4xx_conf.h"
 #include "utils.h"
+#include "nrf24l01p.h""
 
 // Private variables
 volatile uint32_t time_var1, time_var2;
@@ -16,6 +17,8 @@ void dac_test();
 
 int main(void) {
   init();
+
+  csnLow();
 
   for(;;) {
     GPIO_SetBits(GPIOD, GPIO_Pin_12);

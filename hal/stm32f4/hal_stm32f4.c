@@ -1,4 +1,8 @@
-#include "hal_stm32f4.h"
+#include "nrf24_hal.h"
+#include "stm32f4xx_conf.h"
+
+#define CHIP_SELECT_PIN GPIO_Pin_7
+#define CHIP_ENABLE_PIN GPIO_Pin_8
 
 void csnLow() {
 	GPIOE->BSRRH |= CHIP_SELECT_PIN; // set PE7 (CSN) low
@@ -224,35 +228,5 @@ void _InitializeUart(uint32_t baudrate) {
 
 	// finally this enables the complete USART1 peripheral
 	USART_Cmd(USART1, ENABLE);
-}
-
-unsigned char _USART_getc(USART_TypeDef* USARTx) {
-  // wait until data register is empty
-  /* Wait until the data is ready to be received. */
-  while ((USARTx->SR & USART_SR_RXNE) == 0);
-
-  // read RX data, combine with DR mask (we only accept a max of 9 Bits)
-  return USARTx->DR & 0x1FF;
-}
-
-// This will print on usart 1 (the original function has been commented out in printf.c !!!
-int fputc(int ch, FILE *f) {
-  // Wait until transmit finishes
-  while (USART_GetFlagStatus(USART1, USART_FLAG_TXE) == RESET);
-
-  // Transmit the character using USART1
-  USART_SendData(USART1, (u8) ch);
-  return ch;
-}
-
-// receives an 32 bit integer from serial port. (little endian)
-uint32_t _USART1_recv_dword() {
-  uint32_t i, result = 0;
-  for(i = 0; i < 4; i++) {
-    uint32_t recv = _USART_getc(USART1) << (i * 8);
-    result |= recv;
-  }
-
-  return result;
 }
 

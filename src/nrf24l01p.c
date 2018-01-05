@@ -1,3 +1,4 @@
+#include <stdint.h>
 #include "nrf24l01p.h"
 
 void readRegister(uint8_t reg, void* dataIn, uint8_t len) {
@@ -84,14 +85,17 @@ void nrf24_enableCRC(uint8_t numBytes) {
       config.en_crc = 0;
       config.crco   = 0;
       break;
+
     case 1:
       config.en_crc = 1;
       config.crco   = 0;
       break;
+
     case 2:
       config.en_crc = 1;
       config.crco   = 1;
       break;
+
     default:
       break;
   }
@@ -213,21 +217,27 @@ void nrf24_setRxAddress(uint8_t pipeId, uint8_t* rxAddr) {
     case 0: 
       writeRegister(REG_RX_ADDR_P0, rxAddr, addressWidth);
       break;
+
     case 1:
       writeRegister(REG_RX_ADDR_P1, rxAddr, addressWidth);
       break;
+
     case 2:
       writeRegister(REG_RX_ADDR_P2, rxAddr, 1);
       break;
+
     case 3:
       writeRegister(REG_RX_ADDR_P3, rxAddr, 1);
       break;
+
     case 4:
       writeRegister(REG_RX_ADDR_P4, rxAddr, 1);
       break;
+
     case 5:
       writeRegister(REG_RX_ADDR_P5, rxAddr, 1);
       break;
+
     default:
       break;
   }
@@ -256,25 +266,31 @@ uint8_t nrf24_getRxAddress(uint8_t pipeId, uint8_t* rxAddr) {
     case 0: 
       readRegister(REG_RX_ADDR_P0, rxAddr, addressWidth);
       break;
+
     case 1:
       readRegister(REG_RX_ADDR_P1, rxAddr, addressWidth);
       break;
+
     case 2:
       readRegister(REG_RX_ADDR_P1, rxAddr, addressWidth);
       readRegisterB(REG_RX_ADDR_P2, &rxAddr[addressWidth-1]);
       break;
+
     case 3:
       readRegisterB(REG_RX_ADDR_P1, rxAddr);
       readRegisterB(REG_RX_ADDR_P3, &rxAddr[addressWidth-1]);
       break;
+
     case 4:
       readRegisterB(REG_RX_ADDR_P1, rxAddr);
       readRegisterB(REG_RX_ADDR_P4, &rxAddr[addressWidth-1]);
       break;
+
     case 5:
       readRegisterB(REG_RX_ADDR_P1, rxAddr);
       readRegisterB(REG_RX_ADDR_P5, &rxAddr[addressWidth-1]);
       break;
+
     default:
       break;
   }
@@ -359,21 +375,27 @@ uint8_t nrf24_getPayloadSize(uint8_t pipeId) {
     case 0: 
       readRegisterB(REG_RX_PW_P0, &size);
       break;
+
     case 1:
       readRegisterB(REG_RX_PW_P1, &size);
       break;
+
     case 2:
       readRegisterB(REG_RX_PW_P2, &size);
       break;
+
     case 3:
       readRegisterB(REG_RX_PW_P3, &size);
       break;
+
     case 4:
       readRegisterB(REG_RX_PW_P4, &size);
       break;
+
     case 5:
       readRegisterB(REG_RX_PW_P5, &size);
       break;
+
     default:
       break;
   }

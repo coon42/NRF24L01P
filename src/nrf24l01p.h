@@ -1,8 +1,6 @@
 #ifndef NRF24L01P_H
 #define NRF24L01P_H
 
-#include "hal_stm32f4.h"
-
 // Platform independent NRF24L01+ library
 
 // created 09 May 2014
@@ -24,7 +22,7 @@
 
 // For some reason the transmitter must not be active for more at 4ms at a time
 // so it has to be set in standby I mode after 4ms beeing active for cooldown.
-static uint32_t txCooldownTimeMs_;
+static uint32_t txCooldownTimeMs_; // TODO: move to .c file
 #define TRUE 1
 #define FALSE 0
 
@@ -35,7 +33,11 @@ static uint32_t txCooldownTimeMs_;
 #define NRF_INVALID_PAYLOAD_SIZE -3
 
 // Constants
-enum {NRF_SENDER = 0, NRF_RECEIVER = 1};
+enum {
+	NRF_SENDER = 0, 
+	NRF_RECEIVER = 1
+}; // TODO: move to somewhere else
+
 #define NRF_MAX_PAYLOAD_SIZE 32
 #define PIPE_0 0
 #define PIPE_1 1
@@ -84,7 +86,6 @@ enum {NRF_SENDER = 0, NRF_RECEIVER = 1};
 #define REG_FIFO_STATUS          0x17
 #define REG_DYNPD                0x1C
 #define REG_FEATURE              0x1D
-
 
 // Register structures
 typedef struct {
@@ -218,7 +219,7 @@ typedef struct {
 } RegNrf24STATUS_t;
 
 enum { 
-	X_P_NO_FIFO_EMPTY = 0x07 
+	RX_P_NO_FIFO_EMPTY = 0x07 
 };
 
 typedef struct {

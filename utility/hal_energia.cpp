@@ -44,3 +44,4 @@ uint32_t getTickMillis() {
 void delayUs(uint32_t microseconds) {
   delayMicroseconds(microseconds);
 }
+
