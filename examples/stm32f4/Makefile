@@ -86,7 +86,7 @@ $(OBJDIR)/libstm32f4.a: $(LIB_OBJS)
 	$(AR) -r $@ $(LIB_OBJS)
 
 $(OBJDIR)/libnrf24.a: $(NRF_OBJS)
-	$(AR) -r $@ $(NRF_OBJS)
+	$(AR) -r $@ $(NRF_OBJS) $(LIB_OBJS)
 
 $(OUTPATH)/$(PROJ_NAME).elf: $(OBJDIR)/libstm32f4.a $(OBJDIR)/libnrf24.a $(MAIN_OBJS)
 	$(CC) $(CFLAGS) $^ -o $@ -L. -Lobj -lstm32f4 -lnrf24 -lm
