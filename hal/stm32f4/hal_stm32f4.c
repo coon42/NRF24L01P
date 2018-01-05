@@ -30,6 +30,7 @@ uint8_t spiXmitByte(uint8_t value) {
 	while( !(SPI1->SR & SPI_I2S_FLAG_TXE) ); // wait until transmit complete
 	while( !(SPI1->SR & SPI_I2S_FLAG_RXNE) ); // wait until receive complete
 	while( SPI1->SR & SPI_I2S_FLAG_BSY ); // wait until SPI is not busy anymore
+
 	return SPI1->DR; // return received data from SPI data register
 }
 
@@ -144,7 +145,6 @@ uint32_t getTickMillis() {
   return TIM3->CNT;
 }
 
-
 void _init_TIM3(void)
 {
   TIM_TimeBaseInitTypeDef TIM_TimeBaseStructure;
@@ -158,7 +158,6 @@ void _init_TIM3(void)
   TIM_ITConfig (TIM3, TIM_IT_Update, ENABLE);
   TIM_Cmd (TIM3, ENABLE);
 }
-
 
 // UART
 void _InitializeUart(uint32_t baudrate) {
