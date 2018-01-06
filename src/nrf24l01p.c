@@ -487,6 +487,7 @@ uint8_t nrf24_txFifoIsEmpty() {
 }
 
 void checkForCooldown() {
+/*
   if(!nrf24_txFifoIsEmpty())
     if(txCooldownTimeMs_ == 0)
       txCooldownTimeMs_ = getTickMillis(); // start the timer
@@ -494,6 +495,7 @@ void checkForCooldown() {
       while(!nrf24_txFifoIsEmpty()); // wait for empty FIFO so the transmitter can go to standby I mode and gets a little cooldown.
       txCooldownTimeMs_ = 0; // reset the timer
     }
+*/
 }
 
 uint8_t nrf24_carrierIsPresent() {

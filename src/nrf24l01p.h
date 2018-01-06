@@ -361,8 +361,8 @@ uint8_t nrf24_txFifoIsFull();
 uint8_t nrf24_txFifoIsEmpty();
 
 static void checkForCooldown();
-static void readRegisterB(uint8_t reg, void* dataIn);
-static void readRegister(uint8_t reg, void* dataIn, uint8_t len);
+void readRegisterB(uint8_t reg, void* dataIn); // TODO: make static again
+void readRegister(uint8_t reg, void* dataIn, uint8_t len);
 static void writeRegisterB(uint8_t reg, void* dataOut);
 static void writeRegister(uint8_t reg, void* dataOut, uint8_t len);
 static void clearRxInterrupt();

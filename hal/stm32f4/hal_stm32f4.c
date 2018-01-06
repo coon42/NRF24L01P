@@ -57,7 +57,7 @@ void spiInit() {
 	GPIO_PinAFConfig(GPIOC, GPIO_PinSource11, GPIO_AF_SPI3);
 	GPIO_PinAFConfig(GPIOC, GPIO_PinSource12, GPIO_AF_SPI3);
 
-	RCC_APB2PeriphClockCmd(RCC_APB1Periph_SPI3, ENABLE);
+	RCC_APB1PeriphClockCmd(RCC_APB1Periph_SPI3, ENABLE);
 
 	SPI_InitStruct.SPI_Direction         = SPI_Direction_2Lines_FullDuplex;        // set to full duplex mode, seperate MOSI and MISO lines
 	SPI_InitStruct.SPI_Mode              = SPI_Mode_Master;                        // transmit in master mode, NSS pin has to be always high
