@@ -7,13 +7,11 @@
 #include "nrf24l01p.h"
 
 // Private variables
-volatile uint32_t time_var1, time_var2;
+volatile uint32_t time_var1;
 
 // Private function prototypes
 void Delay(volatile uint32_t nCount);
 void init();
-void calculation_test();
-void dac_test();
 
 int sendUartChar(char ch) {
   while (USART_GetFlagStatus(USART1, USART_FLAG_TXE) == RESET);
@@ -134,18 +132,15 @@ void init() {
 
 // Called from systick handler
 void timing_handler() {
-  if (time_var1) {
+  if (time_var1)
     time_var1--;
-  }
-
-  time_var2++;
 }
 
 // Delay a number of systick cycles (1ms)
 void Delay(volatile uint32_t nCount) {
   time_var1 = nCount;
 
-  while(time_var1){};
+  while(time_var1);
 }
 
 // Dummy function to avoid compiler error
