@@ -6,23 +6,42 @@
 #define CHIP_SELECT_PIN GPIO_Pin_14
 #define IRQ_PIN GPIO_Pin_15
 
-void ceLow() {
+// TODO: move to somewhere else!?
+
+static void _prvInit_TIM3(void) {
+  TIM_TimeBaseInitTypeDef TIM_TimeBaseStructure;
+  RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM3, ENABLE);
+
+  TIM_TimeBaseStructInit(&TIM_TimeBaseStructure);
+  TIM_TimeBaseStructure.TIM_Period = UINT16_MAX;
+  TIM_TimeBaseStructure.TIM_Prescaler = (SystemCoreClock / 1000000) - 1; // resolution: every 1ms
+  TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up;
+  TIM_TimeBaseStructure.TIM_ClockDivision = 0;
+
+  TIM_TimeBaseInit(TIM3, &TIM_TimeBaseStructure);
+  TIM_ITConfig(TIM3, TIM_IT_Update, ENABLE);
+  TIM_Cmd (TIM3, ENABLE);
+}
+
+// --
+
+void nrf24_ceLow() {
   GPIOC->BSRRH |= CHIP_ENABLE_PIN; // set PC13 (CE) low
 }
 
-void ceHigh() {
+void nrf24_ceHigh() {
   GPIOC->BSRRL |= CHIP_ENABLE_PIN; // set PC13 (CE) high
 }
 
-void csnLow() {
+void nrf24_csnLow() {
 	GPIOC->BSRRH |= CHIP_SELECT_PIN; // set PC14 (CSN) low
 }
 
-void csnHigh() {
+void nrf24_csnHigh() {
 	GPIOC->BSRRL |= CHIP_SELECT_PIN; // set PC14 (CSN) high
 }
 
-uint8_t getCe() {
+uint8_t nrf24_getCe() {
   return GPIO_ReadInputDataBit(GPIOC, CHIP_ENABLE_PIN);
 }
 
@@ -70,7 +89,7 @@ void spiInit() {
 	SPI_Init(SPI3, &SPI_InitStruct);
 
 	SPI_Cmd(SPI3, ENABLE);
-	_init_TIM3(); // enable Timer 3 for delay function
+	_prvInit_TIM3(); // enable Timer 3 for delay function
 }
 
 void gpioInit() {
@@ -84,8 +103,8 @@ void gpioInit() {
   GPIO_InitStruct.GPIO_PuPd  = GPIO_PuPd_UP;
   GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  csnHigh();
-  ceLow();
+  nrf24_csnHigh();
+  nrf24_ceLow();
 }
 
 void delayUs(uint32_t microseconds) {
@@ -107,20 +126,5 @@ void delayUs(uint32_t microseconds) {
 
   while(cur < rest_us)
 	  cur = TIM3->CNT;
-}
-
-void _init_TIM3(void) {
-  TIM_TimeBaseInitTypeDef TIM_TimeBaseStructure;
-  RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM3, ENABLE);
-
-  TIM_TimeBaseStructInit(&TIM_TimeBaseStructure);
-  TIM_TimeBaseStructure.TIM_Period = UINT16_MAX;
-  TIM_TimeBaseStructure.TIM_Prescaler = (SystemCoreClock / 1000000) - 1; // resolution: every 1ms
-  TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up;
-  TIM_TimeBaseStructure.TIM_ClockDivision = 0;
-
-  TIM_TimeBaseInit(TIM3, &TIM_TimeBaseStructure);
-  TIM_ITConfig(TIM3, TIM_IT_Update, ENABLE);
-  TIM_Cmd (TIM3, ENABLE);
 }
 

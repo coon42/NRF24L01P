@@ -33,21 +33,6 @@ int main(void) {
   for(;;) {
     GPIO_SetBits(GPIOD, GPIO_Pin_12);
     Delay(500);
-
-    uint8_t b[5];
-    readRegister(REG_RX_ADDR_P1, b, 5); 
-
-    sendUartText("RX_ADDR_P1: ");
-    char pBuf[16];
-
-    for(int i = 0; i < sizeof(b); i++) {
-	    itoa(b[i], pBuf, 16);
-      strcat(pBuf, ' ');
-    	sendUartText(pBuf);
-    }
-
-    sendUartChar('\n');
-
     GPIO_ResetBits(GPIOD, GPIO_Pin_12);
     Delay(500);
   }

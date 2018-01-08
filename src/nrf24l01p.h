@@ -360,14 +360,5 @@ void nrf24_flushTxFifo(); // Will drop ALL elements from the TX FIFO
 uint8_t nrf24_txFifoIsFull();
 uint8_t nrf24_txFifoIsEmpty();
 
-static void checkForCooldown();
-void readRegisterB(uint8_t reg, void* dataIn); // TODO: make static again
-void readRegister(uint8_t reg, void* dataIn, uint8_t len);
-static void writeRegisterB(uint8_t reg, void* dataOut);
-static void writeRegister(uint8_t reg, void* dataOut, uint8_t len);
-static void clearRxInterrupt();
-static int8_t readPayload(uint8_t* payload);
-static void writePayload(uint8_t* payload, uint8_t payloadSize);
-
 #endif // !_NRF24L01P_H
 

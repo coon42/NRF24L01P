@@ -1,64 +1,83 @@
 #include <stdint.h>
 #include "nrf24l01p.h"
 
-void readRegister(uint8_t reg, void* dataIn, uint8_t len) {
+static void readRegister(uint8_t reg, void* dataIn, uint8_t len) {
   int i;
-  csnLow();
+  nrf24_csnLow();
   spiXmitByte(CMD_R_REGISTER | (0x1F & reg));
 
   for(i = 0; i < len; i++)
     ((uint8_t*)dataIn)[i] = spiXmitByte(0x00);
 
-  csnHigh();
+  nrf24_csnHigh();
 }
 
-void readRegisterB(uint8_t reg, void* dataIn) {
+static void readRegisterB(uint8_t reg, void* dataIn) {
   readRegister(reg, dataIn, 1);
 }
 
-void writeRegister(uint8_t reg, void* dataOut, uint8_t len) {
+static void writeRegister(uint8_t reg, void* dataOut, uint8_t len) {
   int i;
-  csnLow();
+  nrf24_csnLow();
   uint8_t status = spiXmitByte(CMD_W_REGISTER  | (0x1F & reg));
 
   for(i = 0; i < len; i++)
     spiXmitByte(((uint8_t*)dataOut)[i]);
 
-  csnHigh();
+  nrf24_csnHigh();
 }
 
-void writeRegisterB(uint8_t reg, void* dataOut) {
+static void writeRegisterB(uint8_t reg, void* dataOut) {
   writeRegister(reg, dataOut, 1);
 }
 
-int8_t readPayload(uint8_t* payload) {
+static void clearRxInterrupt() {
+  RegNrf24STATUS_t status;
+  readRegisterB(REG_STATUS, &status);
+  status.rx_dr = 1;
+  writeRegisterB(REG_STATUS, &status);
+}
+
+static int8_t readPayload(uint8_t* payload) {
   int i;
   uint8_t payloadSize = nrf24_getPayloadSizeRxFifoTop();
 
   if(payloadSize > 32)
     nrf24_flushRxFifo(); // datasheet page 51 says, this is necessary
 
-  csnLow();
+  nrf24_csnLow();
   spiXmitByte(CMD_R_RX_PAYLOAD);
 
   for(i = 0; i < payloadSize; i++)
     payload[i] = spiXmitByte(0x00);
 
-  csnHigh();
+  nrf24_csnHigh();
   clearRxInterrupt();
 
   return payloadSize;
 }
 
-void writePayload(uint8_t* payload, uint8_t payloadSize) {
+static void writePayload(uint8_t* payload, uint8_t payloadSize) {
   int i;
-  csnLow();
+  nrf24_csnLow();
   spiXmitByte(CMD_W_TX_PAYLOAD);
 
   for(i = 0; i < payloadSize; i++)
     spiXmitByte(payload[i]);
 
-  csnHigh();  
+  nrf24_csnHigh();  
+}
+
+static void checkForCooldown() {
+/*
+  if(!nrf24_txFifoIsEmpty())
+    if(txCooldownTimeMs_ == 0)
+      txCooldownTimeMs_ = getTickMillis(); // start the timer
+    else if(getTickMillis() - txCooldownTimeMs_ >= TX_COOLDOWN_TIME) {
+      while(!nrf24_txFifoIsEmpty()); // wait for empty FIFO so the transmitter can go to standby I mode and gets a little cooldown.
+      txCooldownTimeMs_ = 0; // reset the timer
+    }
+*/
 }
 
 uint8_t nrf24_shockburstIsEnabled(uint8_t pipeId) {
@@ -121,9 +140,9 @@ void nrf24_listenMode(uint8_t enable) {
   writeRegisterB(REG_CONFIG, &config);
 
   if(enable)
-	  ceHigh();
+	  nrf24_ceHigh();
   else
-	  ceLow();
+	  nrf24_ceLow();
 }
 
 // EN_AA
@@ -406,10 +425,10 @@ uint8_t nrf24_getPayloadSize(uint8_t pipeId) {
 uint8_t nrf24_getPayloadSizeRxFifoTop() {
   uint8_t size;
   
-  csnLow();
+  nrf24_csnLow();
   spiXmitByte(CMD_R_RX_PL_WID);
   size = spiXmitByte(0x00);
-  csnHigh();
+  nrf24_csnHigh();
   
   return size;
 }
@@ -425,23 +444,16 @@ uint32_t nrf24_recvPacket(void* packet) {
   return readPayload((uint8_t*)packet);
 }
 
-void clearRxInterrupt() {
-  RegNrf24STATUS_t status;
-  readRegisterB(REG_STATUS, &status);
-  status.rx_dr = 1;
-  writeRegisterB(REG_STATUS, &status);
-}
-
 void nrf24_flushRxFifo() {  
-  csnLow();
+  nrf24_csnLow();
   spiXmitByte(CMD_FLUSH_RX);
-  csnHigh();
+  nrf24_csnHigh();
 }
 
 void nrf24_flushTxFifo() {
-  csnLow();
+  nrf24_csnLow();
   spiXmitByte(CMD_FLUSH_TX);
-  csnHigh();
+  nrf24_csnHigh();
 }
 
 int8_t nrf24_sendPacket(void* packet, int8_t payloadSize, uint8_t listenAfterSend) {
@@ -461,8 +473,8 @@ int8_t nrf24_sendPacket(void* packet, int8_t payloadSize, uint8_t listenAfterSen
   // To initially start a transmission, it is important that something in the TX FIFO
   // before pulling the chip enable pin high. If chip enable is already set when the payload is empty, 
   // the transmission will NOT be initiated before ce got pulled low and high again!   
-  if(!getCe()) {
-    ceHigh();
+  if(!nrf24_getCe()) {
+    nrf24_ceHigh();
     delayUs(10); // Delay from CE positive edge to CSN low
   }
 
@@ -484,18 +496,6 @@ uint8_t nrf24_txFifoIsEmpty() {
   readRegisterB(REG_FIFO_STATUS, &fifostatus);
 
   return fifostatus.tx_empty;
-}
-
-void checkForCooldown() {
-/*
-  if(!nrf24_txFifoIsEmpty())
-    if(txCooldownTimeMs_ == 0)
-      txCooldownTimeMs_ = getTickMillis(); // start the timer
-    else if(getTickMillis() - txCooldownTimeMs_ >= TX_COOLDOWN_TIME) {
-      while(!nrf24_txFifoIsEmpty()); // wait for empty FIFO so the transmitter can go to standby I mode and gets a little cooldown.
-      txCooldownTimeMs_ = 0; // reset the timer
-    }
-*/
 }
 
 uint8_t nrf24_carrierIsPresent() {
