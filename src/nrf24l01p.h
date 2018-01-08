@@ -1,11 +1,11 @@
-#ifndef NRF24L01P_H
-#define NRF24L01P_H
+#ifndef _NRF24L01P_H
+#define _NRF24L01P_H
 
 // Platform independent NRF24L01+ library
 
 // created 09 May 2014
-// modified 04 January 2017
-// version: 0.87
+// modified 06 January 2017
+// version: 0.88
 // by coon (coon@c-base.org)
 
 // TODO:
@@ -369,5 +369,5 @@ static void clearRxInterrupt();
 static int8_t readPayload(uint8_t* payload);
 static void writePayload(uint8_t* payload, uint8_t payloadSize);
 
-#endif // NRF24L01P_H
+#endif // !_NRF24L01P_H
 

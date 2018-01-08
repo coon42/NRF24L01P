@@ -16,7 +16,6 @@ Energy saving features will be implemented in the next iteration.
 Features:
 ---------
 - Support for following devices so far:
-  - TM4C1294XL (Texas Instruments Tiva C Connected Launchpad)
   - STM32F4Discovery
 
 - All six pipes are fully supported.
@@ -31,3 +30,4 @@ Todo:
 - Interrupt support
 - Low energy support (use of all stand by modes)
 - Carrier detect / Carrier transmit (for some technical frequency testing, not really important for most users)
+
