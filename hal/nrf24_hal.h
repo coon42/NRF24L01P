@@ -10,7 +10,6 @@ void nrf24_csnLow();
 void nrf24_csnHigh();
 void nrf24_spiInit();
 uint8_t nrf24_spiXmitByte(uint8_t value);
-void nrf24_gpioInit();
 
 void delayUs(uint32_t microSeconds);
 

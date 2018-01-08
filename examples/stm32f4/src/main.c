@@ -125,8 +125,9 @@ void init() {
 
   // ------ UART ------ //
   initDebugUart(115200);
-  gpioInit();
-  spiInit();
+
+  // ------ NRF24 ------ //
+  nrf24_init(81);
 }
 
 // Called from systick handler

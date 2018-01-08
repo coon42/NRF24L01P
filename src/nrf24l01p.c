@@ -511,7 +511,6 @@ uint8_t nrf24_carrierIsPresent() {
 
 void nrf24_init(uint8_t channel) {
   spiInit();
-  gpioInit();
 
   _txCooldownTimeMs = 0;
   nrf24_flushTxFifo();

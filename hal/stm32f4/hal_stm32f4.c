@@ -55,9 +55,20 @@ uint8_t spiXmitByte(uint8_t value) {
 }
 
 void spiInit() {
-	GPIO_InitTypeDef GPIO_InitStruct;
-	SPI_InitTypeDef SPI_InitStruct;
+  GPIO_InitTypeDef GPIO_InitStruct;
+  RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOC, ENABLE);
 
+  GPIO_InitStruct.GPIO_Pin   = CHIP_SELECT_PIN | CHIP_ENABLE_PIN;
+  GPIO_InitStruct.GPIO_Mode  = GPIO_Mode_OUT;
+  GPIO_InitStruct.GPIO_OType = GPIO_OType_PP;
+  GPIO_InitStruct.GPIO_Speed = GPIO_Speed_50MHz;
+  GPIO_InitStruct.GPIO_PuPd  = GPIO_PuPd_UP;
+  GPIO_Init(GPIOC, &GPIO_InitStruct);
+
+  nrf24_csnHigh();
+  nrf24_ceLow();
+
+	SPI_InitTypeDef SPI_InitStruct;
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOC, ENABLE);
 
 	// configure pins used by SPI3
@@ -90,21 +101,6 @@ void spiInit() {
 
 	SPI_Cmd(SPI3, ENABLE);
 	_prvInit_TIM3(); // enable Timer 3 for delay function
-}
-
-void gpioInit() {
-  GPIO_InitTypeDef GPIO_InitStruct;
-  RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOC, ENABLE);
-
-  GPIO_InitStruct.GPIO_Pin   = CHIP_SELECT_PIN | CHIP_ENABLE_PIN;
-  GPIO_InitStruct.GPIO_Mode  = GPIO_Mode_OUT;
-  GPIO_InitStruct.GPIO_OType = GPIO_OType_PP;
-  GPIO_InitStruct.GPIO_Speed = GPIO_Speed_50MHz;
-  GPIO_InitStruct.GPIO_PuPd  = GPIO_PuPd_UP;
-  GPIO_Init(GPIOC, &GPIO_InitStruct);
-
-  nrf24_csnHigh();
-  nrf24_ceLow();
 }
 
 void delayUs(uint32_t microseconds) {
