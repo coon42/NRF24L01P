@@ -127,7 +127,7 @@ void init() {
   initDebugUart(115200);
 
   // ------ NRF24 ------ //
-  nrf24_init(81);
+  nrf24_init();
 }
 
 // Called from systick handler

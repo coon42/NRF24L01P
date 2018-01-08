@@ -314,7 +314,7 @@ typedef struct {
   uint8_t            : 5;
 } RegNrf24FEATURE_t;
 
-void nrf24_init(uint8_t channel);
+void nrf24_init(); // listens to channel 81 by default
 void nrf24_reset(); // TODO: reset registers to default values
 void nrf24_powerUp(uint8_t enable);
 void nrf24_enableCRC(uint8_t numBytes);

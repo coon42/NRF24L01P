@@ -509,13 +509,13 @@ uint8_t nrf24_carrierIsPresent() {
   return rpd.rpd;
 }
 
-void nrf24_init(uint8_t channel) {
+void nrf24_init() {
   spiInit();
 
   _txCooldownTimeMs = 0;
   nrf24_flushTxFifo();
   nrf24_flushRxFifo();
-  nrf24_setRFChannel(channel);
+  nrf24_setRFChannel(81);
   nrf24_listenMode(TRUE);
 }
 
