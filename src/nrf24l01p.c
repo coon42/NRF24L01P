@@ -1,6 +1,10 @@
 #include <stdint.h>
 #include "nrf24l01p.h"
 
+// For some reason the transmitter must not be active for more at 4ms at a time
+// so it has to be set in standby I mode after 4ms beeing active for cooldown.
+static uint32_t _txCooldownTimeMs;
+
 static void readRegister(uint8_t reg, void* dataIn, uint8_t len) {
   int i;
   nrf24_csnLow();
@@ -71,11 +75,11 @@ static void writePayload(uint8_t* payload, uint8_t payloadSize) {
 static void checkForCooldown() {
 /*
   if(!nrf24_txFifoIsEmpty())
-    if(txCooldownTimeMs_ == 0)
-      txCooldownTimeMs_ = getTickMillis(); // start the timer
-    else if(getTickMillis() - txCooldownTimeMs_ >= TX_COOLDOWN_TIME) {
+    if(_txCooldownTimeMs == 0)
+      _txCooldownTimeMs = getTickMillis(); // start the timer
+    else if(getTickMillis() - _txCooldownTimeMs >= TX_COOLDOWN_TIME) {
       while(!nrf24_txFifoIsEmpty()); // wait for empty FIFO so the transmitter can go to standby I mode and gets a little cooldown.
-      txCooldownTimeMs_ = 0; // reset the timer
+      _txCooldownTimeMs = 0; // reset the timer
     }
 */
 }
@@ -509,7 +513,7 @@ void nrf24_init(uint8_t channel) {
   spiInit();
   gpioInit();
 
-  txCooldownTimeMs_ = 0;
+  _txCooldownTimeMs = 0;
   nrf24_flushTxFifo();
   nrf24_flushRxFifo();
   nrf24_setRFChannel(channel);

@@ -4,7 +4,7 @@
 // Platform independent NRF24L01+ library
 
 // created 09 May 2014
-// modified 06 January 2017
+// modified 08 January 2017
 // version: 0.88
 // by coon (coon@c-base.org)
 
@@ -20,9 +20,6 @@
 // sporadicly when sending at maximum speed.
 #define TX_COOLDOWN_TIME 1000
 
-// For some reason the transmitter must not be active for more at 4ms at a time
-// so it has to be set in standby I mode after 4ms beeing active for cooldown.
-static uint32_t txCooldownTimeMs_; // TODO: move to .c file
 #define TRUE 1
 #define FALSE 0
 
