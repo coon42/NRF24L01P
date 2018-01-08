@@ -29,12 +29,6 @@
 #define NRF_NO_DATA_AVAILABLE -2
 #define NRF_INVALID_PAYLOAD_SIZE -3
 
-// Constants
-enum {
-	NRF_SENDER = 0, 
-	NRF_RECEIVER = 1
-}; // TODO: move to somewhere else
-
 #define NRF_MAX_PAYLOAD_SIZE 32
 #define PIPE_0 0
 #define PIPE_1 1
