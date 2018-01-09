@@ -21,23 +21,107 @@ int sendUartChar(char ch) {
 }
 
 void sendUartText(const char* pText) {
-  const char* p = pText;
-
   for(int i = 0; pText[i]; i++)
 		sendUartChar(pText[i]);
 }
 
-int main(void) {
-  init();
+void debugPrint(const char* pText) {
+  sendUartText(pText);	
+}
 
-  for(;;) {
-    GPIO_SetBits(GPIOD, GPIO_Pin_12);
-    Delay(500);
-    GPIO_ResetBits(GPIOD, GPIO_Pin_12);
-    Delay(500);
+void debugPrintln(const char* pText) {
+	sendUartText(pText);
+  sendUartChar('\n');
+}
+
+void debugPrintDec(int n) {
+  char pNum[32];
+  snprintf(pNum, sizeof(pNum), "%d", n);
+
+  sendUartText(pNum);
+}
+
+void debugPrintHex(int n) {
+  char pHex[32];
+  snprintf(pHex, sizeof(pHex), "0x%X", n);
+
+  sendUartText(pHex);
+}
+
+void printFullConfig() {
+  debugPrintln("NRF24 Configuration:");
+  debugPrint("Mode: "); debugPrintln(nrf24_isListening() ? "Listening" : "Transmitting");
+  debugPrint("RF Channel: "); debugPrintDec(nrf24_getRFChannel()); debugPrintln("");
+  debugPrint("RF Speed: "); debugPrintln(nrf24_getDataRate() == SPEED_2M ? "2M" : nrf24_getDataRate() == SPEED_1M ? "1M" : "250K");
+  debugPrint("CRC: "); debugPrintln(nrf24_crcIsEnabled() ? "Enabled" : "Disabled");
+  debugPrint("Encoding scheme: "); debugPrintDec(nrf24_crcGetEncodingScheme()); debugPrintln("");
+  debugPrint("Power Status: "); debugPrintln(nrf24_isPoweredOn() ? "On" : "Off");
+  debugPrintln("Shockburst:");
+
+  for(int i = 0; i < 6; i++) {
+    debugPrint("  ENAA_P"); debugPrintDec(i);
+    debugPrint(": ");
+    debugPrintln(nrf24_shockburstIsEnabled(i) ? "Enabled" : "Disabled");
   }
 
-  return 0;
+  debugPrintln("RX Data Pipes:");
+  for(int i = 0; i < 6; i++) {
+    debugPrint("  ERX_P"); debugPrintDec(i); debugPrint(": ");
+    debugPrintln(nrf24_dataPipeIsEnabled(i) ? "Enabled" : "Disabled");
+  }
+
+  debugPrintln("RX Payload sizes: ");
+  for(int i = 0; i < 6; i++) {
+    debugPrint("  RX_PW_P"); debugPrintDec(i); debugPrint(": ");
+    debugPrintDec(nrf24_getPayloadSize(i)); debugPrintln("");
+  }
+
+
+  debugPrint("Address Width: "); debugPrintDec(nrf24_getAddressWidths()); debugPrintln("");
+  debugPrintln("RX Addresses: ");
+
+  uint8_t rxAddr[5];
+  for(int pipeId = 0; pipeId < 6; pipeId++) {
+    nrf24_getRxAddress(pipeId, rxAddr);
+    debugPrint("  RX_ADDR_P"); debugPrintDec(pipeId); debugPrint(": ");
+    for(int i = 0; i < nrf24_getAddressWidths(); i++) {
+      debugPrint("0x"); debugPrintHex(rxAddr[i]); debugPrint(" ");
+    }
+    debugPrintln("");
+  }
+
+  debugPrintln("TX Address: ");
+  uint8_t txAddr[5];
+  nrf24_getTxAddress(txAddr);
+  debugPrint("  TX_ADDR: ");
+  for(int i = 0; i < nrf24_getAddressWidths(); i++) {
+    debugPrint("0x"); debugPrintHex(txAddr[i]); debugPrint(" ");
+  }
+  debugPrintln("");
+
+  uint8_t fifoIsFull = nrf24_txFifoIsFull();
+  debugPrint("TX_FIFO: "); debugPrintln(fifoIsFull ? "Full" : "Free");
+}
+
+void setup_nrf24() {
+  nrf24_init();
+
+  uint8_t rxaddr[] = {0x01, 0x02, 0x03, 0x02, 0x01 };
+  uint8_t txaddr[] = {0x01, 0x02, 0x03, 0x02, 0x01 };
+  nrf24_setRxAddress(PIPE_0, rxaddr);
+  nrf24_setTxAddress(txaddr);
+  nrf24_enableCRC(CRC_MODE_OFF);
+  nrf24_enableDataPipe(PIPE_0, TRUE);
+  nrf24_enableShockburst(PIPE_0, FALSE);
+  nrf24_setAddressWidth(5);
+  nrf24_listenMode(TRUE);
+  nrf24_setDataRate(SPEED_2M);
+  nrf24_setPayloadSize(PIPE_0, 32);
+  nrf24_powerUp(TRUE);
+
+  debugPrintln("NRF24L01+ Library Example");
+  debugPrintln("-------------------------");
+  printFullConfig();
 }
 
 static void initDebugUart(uint32_t baudrate) {
@@ -128,6 +212,7 @@ void init() {
 
   // ------ NRF24 ------ //
   nrf24_init();
+  setup_nrf24();
 }
 
 // Called from systick handler
@@ -146,5 +231,53 @@ void Delay(volatile uint32_t nCount) {
 // Dummy function to avoid compiler error
 void _init() {
 
+}
+
+void blink() {
+	GPIO_SetBits(GPIOD, GPIO_Pin_12);
+	Delay(50);
+  GPIO_ResetBits(GPIOD, GPIO_Pin_12);
+  Delay(50);
+}
+
+int main(void) {
+  init();
+
+	int32_t recvByteCount;
+  char recvBuffer[NRF_MAX_PAYLOAD_SIZE + 1];
+
+  int i = 0;
+  int ch = 0;
+
+  while(TRUE) {
+		recvByteCount = nrf24_recvPacket(recvBuffer);
+    recvBuffer[recvByteCount] = '\0';
+    
+  	if(recvByteCount != NRF_NO_DATA_AVAILABLE) {
+      blink();     
+ 
+    	debugPrint("Received [");
+      debugPrintDec(recvByteCount);
+      debugPrint("]: ");
+
+      for(int i = 0; i < recvByteCount; ++i) {
+        debugPrintHex(recvBuffer[i]);
+        debugPrint(" ");
+      }
+
+      debugPrintln("");   
+		}
+
+		if(i % 500000 == 0) {
+			debugPrint("Set Channel to: ");
+      debugPrintDec(ch);
+      nrf24_setRFChannel(ch++);
+      debugPrintln("");
+		}
+			
+		i++;
+	}
+
+  return 0;
 }
 
