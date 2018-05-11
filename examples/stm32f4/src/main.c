@@ -252,10 +252,10 @@ int main(void) {
   while(TRUE) {
 		recvByteCount = nrf24_recvPacket(recvBuffer);
     recvBuffer[recvByteCount] = '\0';
-    
+
   	if(recvByteCount != NRF_NO_DATA_AVAILABLE) {
-      blink();     
- 
+      blink();
+
     	debugPrint("Received [");
       debugPrintDec(recvByteCount);
       debugPrint("]: ");
@@ -265,7 +265,7 @@ int main(void) {
         debugPrint(" ");
       }
 
-      debugPrintln("");   
+      debugPrintln("");
 		}
 
 		if(i % 500000 == 0) {
@@ -274,7 +274,7 @@ int main(void) {
       nrf24_setRFChannel(ch++);
       debugPrintln("");
 		}
-			
+
 		i++;
 	}
 
