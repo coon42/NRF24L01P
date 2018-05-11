@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include "nrf24l01p.h"
+#include "nrf24_hal.h"
 
 // For some reason the transmitter must not be active for more at 4ms at a time
 // so it has to be set in standby I mode after 4ms beeing active for cooldown.
@@ -69,7 +70,7 @@ static void writePayload(uint8_t* payload, uint8_t payloadSize) {
   for(i = 0; i < payloadSize; i++)
     spiXmitByte(payload[i]);
 
-  nrf24_csnHigh();  
+  nrf24_csnHigh();
 }
 
 static void checkForCooldown() {
@@ -87,7 +88,7 @@ static void checkForCooldown() {
 uint8_t nrf24_shockburstIsEnabled(uint8_t pipeId) {
   RegNrf24EN_AA_t enaa;
   readRegisterB(REG_EN_AA, &enaa);
-  
+
   switch(pipeId) {
     case 0: return enaa.enaa_p0;
     case 1: return enaa.enaa_p1;
@@ -96,13 +97,15 @@ uint8_t nrf24_shockburstIsEnabled(uint8_t pipeId) {
     case 4: return enaa.enaa_p4;
     case 5: return enaa.enaa_p5;
   }
+
+  return 0;
 }
 
 // NRF24 API
 void nrf24_enableCRC(uint8_t numBytes) {
   RegNrf24CONFIG_t config;
   readRegisterB(REG_CONFIG, &config);
-  
+
   switch(numBytes) {
     case 0:
       config.en_crc = 0;
@@ -122,7 +125,7 @@ void nrf24_enableCRC(uint8_t numBytes) {
     default:
       break;
   }
-  
+
   writeRegisterB(REG_CONFIG, &config);
 }
 
@@ -137,7 +140,7 @@ void nrf24_listenMode(uint8_t enable) {
   // delay transition between rx and tx must be at least 130us
   // else the chip meight crash.
   delayUs(200);
-  
+
   RegNrf24CONFIG_t config;
   readRegisterB(REG_CONFIG, &config);
   config.prim_rx = enable;
@@ -153,7 +156,7 @@ void nrf24_listenMode(uint8_t enable) {
 void nrf24_enableShockburst(uint8_t pipeId, uint8_t enable) {
   RegNrf24EN_AA_t enaa;
   readRegisterB(REG_EN_AA, &enaa);
-  
+
   switch(pipeId) {
     case 0: enaa.enaa_p0 = enable; break;
     case 1: enaa.enaa_p1 = enable; break;
@@ -162,7 +165,7 @@ void nrf24_enableShockburst(uint8_t pipeId, uint8_t enable) {
     case 4: enaa.enaa_p4 = enable; break;
     case 5: enaa.enaa_p5 = enable; break;
   }
-  
+
   writeRegisterB(REG_EN_AA, &enaa);
 }
 
@@ -170,7 +173,7 @@ void nrf24_enableShockburst(uint8_t pipeId, uint8_t enable) {
 void nrf24_enableDataPipe(uint8_t pipeId, uint8_t enable) {
   RegNrf24EN_RXADDR_t enrxaddr;
   readRegisterB(REG_EN_RXADDR, &enrxaddr);
-  
+
   switch(pipeId) {
     case 0: enrxaddr.erx_p0 = enable; break;
     case 1: enrxaddr.erx_p1 = enable; break;
@@ -179,7 +182,7 @@ void nrf24_enableDataPipe(uint8_t pipeId, uint8_t enable) {
     case 4: enrxaddr.erx_p4 = enable; break;
     case 5: enrxaddr.erx_p5 = enable; break;
   }
-  
+
   writeRegisterB(REG_EN_RXADDR, &enrxaddr);
 }
 
@@ -201,27 +204,27 @@ void nrf24_setRFChannel(uint8_t channel) {
 void nrf24_setDataRate(uint8_t dataRate) {
   RegNrf24RF_SETUP_t rfSetup;
   readRegisterB(REG_RF_SETUP, &rfSetup);
-  
+
   switch(dataRate) {
     case SPEED_250K:
       rfSetup.rf_dr_low  = 1;
       rfSetup.rf_dr_high = 0;
       break;
-      
+
     case SPEED_1M:
       rfSetup.rf_dr_low  = 0;
       rfSetup.rf_dr_high = 0;
       break;
-      
+
     case SPEED_2M:
       rfSetup.rf_dr_low  = 0;
-      rfSetup.rf_dr_high = 1;   
+      rfSetup.rf_dr_high = 1;
       break;
-      
+
     default:
       break;
   }
-  
+
   writeRegisterB(REG_RF_SETUP, &rfSetup);
 }
 
@@ -235,9 +238,9 @@ void nrf24_setXmitPower(uint8_t powerLevel) {
 // TODO: refactor for subaddresses?
 void nrf24_setRxAddress(uint8_t pipeId, uint8_t* rxAddr) {
   uint8_t addressWidth = nrf24_getAddressWidths();
-  
+
   switch(pipeId) {
-    case 0: 
+    case 0:
       writeRegister(REG_RX_ADDR_P0, rxAddr, addressWidth);
       break;
 
@@ -284,9 +287,9 @@ void nrf24_setPayloadSize(uint8_t pipeId, uint8_t size) {
 
 uint8_t nrf24_getRxAddress(uint8_t pipeId, uint8_t* rxAddr) {
   uint8_t addressWidth = nrf24_getAddressWidths();
-  
+
   switch(pipeId) {
-    case 0: 
+    case 0:
       readRegister(REG_RX_ADDR_P0, rxAddr, addressWidth);
       break;
 
@@ -375,7 +378,7 @@ uint8_t nrf24_getCurrentRxPipe() {
 uint8_t nrf24_getDataRate() {
   RegNrf24RF_SETUP_t rfSetup;
   readRegisterB(REG_RF_SETUP, &rfSetup);
-  
+
   if(rfSetup.rf_dr_low)
     return SPEED_250K;
   else if(rfSetup.rf_dr_high)
@@ -393,9 +396,9 @@ uint8_t nrf24_isListening() {
 
 uint8_t nrf24_getPayloadSize(uint8_t pipeId) {
   uint8_t size;
-  
+
   switch(pipeId) {
-    case 0: 
+    case 0:
       readRegisterB(REG_RX_PW_P0, &size);
       break;
 
@@ -422,33 +425,33 @@ uint8_t nrf24_getPayloadSize(uint8_t pipeId) {
     default:
       break;
   }
-  
+
   return size;
 }
 
 uint8_t nrf24_getPayloadSizeRxFifoTop() {
   uint8_t size;
-  
+
   nrf24_csnLow();
   spiXmitByte(CMD_R_RX_PL_WID);
   size = spiXmitByte(0x00);
   nrf24_csnHigh();
-  
+
   return size;
 }
 
 uint32_t nrf24_recvPacket(void* packet) {
   if(!nrf24_isPoweredOn())
     return NRF_DEVICE_NOT_POWERED_ON;
-  
+
   uint8_t pipeId = nrf24_getCurrentRxPipe();
   if(pipeId == RX_P_NO_FIFO_EMPTY)
     return NRF_NO_DATA_AVAILABLE;
-  
+
   return readPayload((uint8_t*)packet);
 }
 
-void nrf24_flushRxFifo() {  
+void nrf24_flushRxFifo() {
   nrf24_csnLow();
   spiXmitByte(CMD_FLUSH_RX);
   nrf24_csnHigh();
@@ -475,8 +478,8 @@ int8_t nrf24_sendPacket(void* packet, int8_t payloadSize, uint8_t listenAfterSen
   writePayload((uint8_t*)packet, payloadSize);
 
   // To initially start a transmission, it is important that something in the TX FIFO
-  // before pulling the chip enable pin high. If chip enable is already set when the payload is empty, 
-  // the transmission will NOT be initiated before ce got pulled low and high again!   
+  // before pulling the chip enable pin high. If chip enable is already set when the payload is empty,
+  // the transmission will NOT be initiated before ce got pulled low and high again!
   if(!nrf24_getCe()) {
     nrf24_ceHigh();
     delayUs(10); // Delay from CE positive edge to CSN low
@@ -511,6 +514,8 @@ uint8_t nrf24_carrierIsPresent() {
 
 void nrf24_init() {
   spiInit();
+  nrf24_csnHigh();
+  delayMs(10);
 
   _txCooldownTimeMs = 0;
   nrf24_flushTxFifo();
