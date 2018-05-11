@@ -37,6 +37,6 @@ void spiInit() {
 }
 
 void delayUs(uint32_t microseconds) {
-  // TODO: implement
+  delayMs(microseconds / 1000); // TODO: implement correctly
 }
 
