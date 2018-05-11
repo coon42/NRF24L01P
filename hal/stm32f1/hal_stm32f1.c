@@ -36,7 +36,7 @@ void spiInit() {
   // TODO: not needed !?
 }
 
-void delayUs(uint32_t microseconds) {
+void nrf24_delayUs(uint32_t microseconds) {
   delayMs(microseconds / 1000); // TODO: implement correctly
 }
 

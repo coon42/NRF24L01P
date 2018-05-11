@@ -103,7 +103,7 @@ void spiInit() {
 	_prvInit_TIM3(); // enable Timer 3 for delay function
 }
 
-void delayUs(uint32_t microseconds) {
+void nrf24_delayUs(uint32_t microseconds) {
   int i;
   volatile uint16_t cur = 0;
   uint32_t parts = microseconds / UINT16_MAX; // for values bigger than 16 bit ...
