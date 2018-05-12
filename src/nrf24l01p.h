@@ -4,8 +4,8 @@
 // Platform independent NRF24L01+ library
 
 // created 09 May 2014
-// modified 08 January 2017
-// version: 0.88
+// last maintenance 12 May 2018
+// version: 0.89
 // by coon (coon@c-base.org)
 
 // TODO:
@@ -13,17 +13,17 @@
 // - Shockburst
 // - Low energy stuff
 
-// Every second the transmitter will be set to standby-I mode 
-// for a short time to cooldown. The datasheet days this has 
-// to be done every 4ms but one second seems also to work. 
-// If you don't let the chip cooldown, it will stop transmitting 
+// Every second the transmitter will be set to standby-I mode
+// for a short time to cooldown. The datasheet days this has
+// to be done every 4ms but one second seems also to work.
+// If you don't let the chip cooldown, it will stop transmitting
 // sporadicly when sending at maximum speed.
 #define TX_COOLDOWN_TIME 1000
 
 #define TRUE 1
 #define FALSE 0
 
-// custom errors (TODO: make a higher NRF layer?) 
+// custom errors (TODO: make a higher NRF layer?)
 #define NRF_OK 0;
 #define NRF_DEVICE_NOT_POWERED_ON -1
 #define NRF_NO_DATA_AVAILABLE -2
@@ -38,8 +38,8 @@
 #define PIPE_5 5
 
 // Commands
-#define CMD_R_REGISTER           0x00 // Mask 
-#define CMD_W_REGISTER           0x20 // Mask 
+#define CMD_R_REGISTER           0x00 // Mask
+#define CMD_W_REGISTER           0x20 // Mask
 #define CMD_R_RX_PAYLOAD         0x61
 #define CMD_W_TX_PAYLOAD         0xA0
 #define CMD_FLUSH_TX             0xE1
@@ -86,7 +86,7 @@ typedef struct {
   uint8_t en_crc      : 1;
   uint8_t mask_max_rt : 1;
   uint8_t mask_tx_ds  : 1;
-  uint8_t mask_rx_dr  : 1;  
+  uint8_t mask_rx_dr  : 1;
   uint8_t             : 1; // reserved
 } RegNrf24CONFIG_t;
 
@@ -122,7 +122,7 @@ typedef struct {
 } RegNrf24SETUP_AW_t;
 
 enum {
-	AW_3BYTES  = 0x01, 
+	AW_3BYTES  = 0x01,
 	AW_4BYTES  = 0x02,
 	AW_5BYTES  = 0x03
 };
@@ -133,7 +133,7 @@ typedef struct {
 } RegNrf24SETUP_RETR_t;
 
 enum {
-  ARD_RT_DELAY_250US   = 0x00,    
+  ARD_RT_DELAY_250US   = 0x00,
   ARD_RT_DELAY_500US   = 0x01,
   ARD_RT_DELAY_750US   = 0x02,
   ARD_RT_DELAY_1000US  = 0x03,
@@ -187,17 +187,17 @@ typedef struct {
 } RegNrf24RF_SETUP_t;
 
 // Data Rates
-enum { 
-	SPEED_250K = 0, 
-	SPEED_1M   = 1, 
-	SPEED_2M   = 2 
+enum {
+	SPEED_250K = 0,
+	SPEED_1M   = 1,
+	SPEED_2M   = 2
 };
 
-enum { 
+enum {
 	RF_PWR_0 = 0x00,
 	RF_PWR_1 = 0x01,
 	RF_PWR_2 = 0x02,
-	RF_PWR_3 = 0x03 
+	RF_PWR_3 = 0x03
 };
 
 typedef struct {
@@ -209,8 +209,8 @@ typedef struct {
   uint8_t         : 1;
 } RegNrf24STATUS_t;
 
-enum { 
-	RX_P_NO_FIFO_EMPTY = 0x07 
+enum {
+	RX_P_NO_FIFO_EMPTY = 0x07
 };
 
 typedef struct {
@@ -319,14 +319,14 @@ void nrf24_setAddressWidth(uint8_t numBytes);
 void nrf24_setRFChannel(uint8_t channel);
 void nrf24_setDataRate(uint8_t dataRate);
 void nrf24_setXmitPower(uint8_t powerLevel);
-void nrf24_setTxAddress(uint8_t* addr);
+void nrf24_setTxAddress(uint8_t* pAddress);
 void nrf24_setPayloadSize(uint8_t pipeId, uint8_t size);
-void nrf24_setRxAddress(uint8_t pipeId, uint8_t* rxAddr); // TODO: refactor for subaddresses?
-int8_t nrf24_sendPacket(void* packet, int8_t payloadSize, uint8_t listenAfterSend);
+void nrf24_setRxAddress(uint8_t pipeId, uint8_t* pRxAddress); // TODO: refactor for subaddresses?
+int8_t nrf24_sendPacket(void* pPacket, int8_t payloadSize, uint8_t listenAfterSend);
 
 // TODO: SETUP_RETR
 // RF_SETUP
-// TODO: 
+// TODO:
 //   CONST_WAVE
 //   PLL_LOCK
 
@@ -337,13 +337,13 @@ uint8_t nrf24_isPoweredOn();
 uint8_t nrf24_shockburstIsEnabled(uint8_t pipeId);
 uint8_t nrf24_dataPipeIsEnabled(uint8_t pipeId);
 uint8_t nrf24_getAddressWidths();
-uint8_t nrf24_getRxAddress(uint8_t pipeId, uint8_t* rxAddr);
-uint8_t nrf24_getTxAddress(uint8_t* txAddr);
+uint8_t nrf24_getRxAddress(uint8_t pipeId, uint8_t* pRxAddr);
+uint8_t nrf24_getTxAddress(uint8_t* pTxAddress);
 uint8_t nrf24_getRFChannel();
 uint8_t nrf24_getCurrentRxPipe(); // STATUS -> RX_P_NO (gets the pipeId of the data on top of the RX fifo. TODO: rename?
 uint8_t nrf24_getDataRate();
 uint8_t nrf24_isListening();
-uint32_t nrf24_recvPacket(void* packet);
+uint32_t nrf24_recvPacket(void* pPacket);
 uint8_t nrf24_getPayloadSize(uint8_t pipeId);
 uint8_t nrf24_getPayloadSizeRxFifoTop();
 void nrf24_flushRxFifo(); // Will drop ALL elements from the RX FIFO

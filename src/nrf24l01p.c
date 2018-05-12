@@ -6,34 +6,34 @@
 // so it has to be set in standby I mode after 4ms beeing active for cooldown.
 static uint32_t _txCooldownTimeMs;
 
-static void readRegister(uint8_t reg, void* dataIn, uint8_t len) {
+static void readRegister(uint8_t reg, void* pData, uint8_t len) {
   int i;
   nrf24_csnLow();
   spiXmitByte(CMD_R_REGISTER | (0x1F & reg));
 
   for(i = 0; i < len; i++)
-    ((uint8_t*)dataIn)[i] = spiXmitByte(0x00);
+    ((uint8_t*)pData)[i] = spiXmitByte(0x00);
 
   nrf24_csnHigh();
 }
 
-static void readRegisterB(uint8_t reg, void* dataIn) {
-  readRegister(reg, dataIn, 1);
+static void readRegisterB(uint8_t reg, void* pData) {
+  readRegister(reg, pData, 1);
 }
 
-static void writeRegister(uint8_t reg, void* dataOut, uint8_t len) {
+static void writeRegister(uint8_t reg, void* pData, uint8_t len) {
   int i;
   nrf24_csnLow();
   uint8_t status = spiXmitByte(CMD_W_REGISTER  | (0x1F & reg));
 
   for(i = 0; i < len; i++)
-    spiXmitByte(((uint8_t*)dataOut)[i]);
+    spiXmitByte(((uint8_t*)pData)[i]);
 
   nrf24_csnHigh();
 }
 
-static void writeRegisterB(uint8_t reg, void* dataOut) {
-  writeRegister(reg, dataOut, 1);
+static void writeRegisterB(uint8_t reg, void* pData) {
+  writeRegister(reg, pData, 1);
 }
 
 static void clearRxInterrupt() {
@@ -43,7 +43,7 @@ static void clearRxInterrupt() {
   writeRegisterB(REG_STATUS, &status);
 }
 
-static int8_t readPayload(uint8_t* payload) {
+static int8_t readPayload(uint8_t* pPayload) {
   int i;
   uint8_t payloadSize = nrf24_getPayloadSizeRxFifoTop();
 
@@ -54,7 +54,7 @@ static int8_t readPayload(uint8_t* payload) {
   spiXmitByte(CMD_R_RX_PAYLOAD);
 
   for(i = 0; i < payloadSize; i++)
-    payload[i] = spiXmitByte(0x00);
+    pPayload[i] = spiXmitByte(0x00);
 
   nrf24_csnHigh();
   clearRxInterrupt();
@@ -62,13 +62,13 @@ static int8_t readPayload(uint8_t* payload) {
   return payloadSize;
 }
 
-static void writePayload(uint8_t* payload, uint8_t payloadSize) {
+static void writePayload(uint8_t* pPayload, uint8_t payloadSize) {
   int i;
   nrf24_csnLow();
   spiXmitByte(CMD_W_TX_PAYLOAD);
 
   for(i = 0; i < payloadSize; i++)
-    spiXmitByte(payload[i]);
+    spiXmitByte(pPayload[i]);
 
   nrf24_csnHigh();
 }
@@ -139,7 +139,7 @@ void nrf24_powerUp(uint8_t enable) {
 void nrf24_listenMode(uint8_t enable) {
   // delay transition between rx and tx must be at least 130us
   // else the chip meight crash.
-  delayUs(200);
+  nrf24_delayUs(200);
 
   RegNrf24CONFIG_t config;
   readRegisterB(REG_CONFIG, &config);
@@ -236,32 +236,32 @@ void nrf24_setXmitPower(uint8_t powerLevel) {
 }
 
 // TODO: refactor for subaddresses?
-void nrf24_setRxAddress(uint8_t pipeId, uint8_t* rxAddr) {
+void nrf24_setRxAddress(uint8_t pipeId, uint8_t* pRxAddress) {
   uint8_t addressWidth = nrf24_getAddressWidths();
 
   switch(pipeId) {
     case 0:
-      writeRegister(REG_RX_ADDR_P0, rxAddr, addressWidth);
+      writeRegister(REG_RX_ADDR_P0, pRxAddress, addressWidth);
       break;
 
     case 1:
-      writeRegister(REG_RX_ADDR_P1, rxAddr, addressWidth);
+      writeRegister(REG_RX_ADDR_P1, pRxAddress, addressWidth);
       break;
 
     case 2:
-      writeRegister(REG_RX_ADDR_P2, rxAddr, 1);
+      writeRegister(REG_RX_ADDR_P2, pRxAddress, 1);
       break;
 
     case 3:
-      writeRegister(REG_RX_ADDR_P3, rxAddr, 1);
+      writeRegister(REG_RX_ADDR_P3, pRxAddress, 1);
       break;
 
     case 4:
-      writeRegister(REG_RX_ADDR_P4, rxAddr, 1);
+      writeRegister(REG_RX_ADDR_P4, pRxAddress, 1);
       break;
 
     case 5:
-      writeRegister(REG_RX_ADDR_P5, rxAddr, 1);
+      writeRegister(REG_RX_ADDR_P5, pRxAddress, 1);
       break;
 
     default:
@@ -269,8 +269,8 @@ void nrf24_setRxAddress(uint8_t pipeId, uint8_t* rxAddr) {
   }
 }
 
-void nrf24_setTxAddress(uint8_t* addr) {
-  writeRegister(REG_TX_ADDR, addr, 5);
+void nrf24_setTxAddress(uint8_t* pAddress) {
+  writeRegister(REG_TX_ADDR, pAddress, 5);
 }
 
 void nrf24_setPayloadSize(uint8_t pipeId, uint8_t size) {
@@ -285,36 +285,36 @@ void nrf24_setPayloadSize(uint8_t pipeId, uint8_t size) {
   }
 }
 
-uint8_t nrf24_getRxAddress(uint8_t pipeId, uint8_t* rxAddr) {
+uint8_t nrf24_getRxAddress(uint8_t pipeId, uint8_t* pRxAddress) {
   uint8_t addressWidth = nrf24_getAddressWidths();
 
   switch(pipeId) {
     case 0:
-      readRegister(REG_RX_ADDR_P0, rxAddr, addressWidth);
+      readRegister(REG_RX_ADDR_P0, pRxAddress, addressWidth);
       break;
 
     case 1:
-      readRegister(REG_RX_ADDR_P1, rxAddr, addressWidth);
+      readRegister(REG_RX_ADDR_P1, pRxAddress, addressWidth);
       break;
 
     case 2:
-      readRegister(REG_RX_ADDR_P1, rxAddr, addressWidth);
-      readRegisterB(REG_RX_ADDR_P2, &rxAddr[addressWidth-1]);
+      readRegister(REG_RX_ADDR_P1, pRxAddress, addressWidth);
+      readRegisterB(REG_RX_ADDR_P2, &pRxAddress[addressWidth-1]);
       break;
 
     case 3:
-      readRegisterB(REG_RX_ADDR_P1, rxAddr);
-      readRegisterB(REG_RX_ADDR_P3, &rxAddr[addressWidth-1]);
+      readRegisterB(REG_RX_ADDR_P1, pRxAddress);
+      readRegisterB(REG_RX_ADDR_P3, &pRxAddress[addressWidth-1]);
       break;
 
     case 4:
-      readRegisterB(REG_RX_ADDR_P1, rxAddr);
-      readRegisterB(REG_RX_ADDR_P4, &rxAddr[addressWidth-1]);
+      readRegisterB(REG_RX_ADDR_P1, pRxAddress);
+      readRegisterB(REG_RX_ADDR_P4, &pRxAddress[addressWidth-1]);
       break;
 
     case 5:
-      readRegisterB(REG_RX_ADDR_P1, rxAddr);
-      readRegisterB(REG_RX_ADDR_P5, &rxAddr[addressWidth-1]);
+      readRegisterB(REG_RX_ADDR_P1, pRxAddress);
+      readRegisterB(REG_RX_ADDR_P5, &pRxAddress[addressWidth-1]);
       break;
 
     default:
@@ -322,8 +322,8 @@ uint8_t nrf24_getRxAddress(uint8_t pipeId, uint8_t* rxAddr) {
   }
 }
 
-uint8_t nrf24_getTxAddress(uint8_t* txAddr) {
-  readRegister(REG_TX_ADDR, txAddr, nrf24_getAddressWidths());
+uint8_t nrf24_getTxAddress(uint8_t* pTxAddress) {
+  readRegister(REG_TX_ADDR, pTxAddress, nrf24_getAddressWidths());
 }
 
 uint8_t nrf24_crcIsEnabled() {
@@ -440,7 +440,7 @@ uint8_t nrf24_getPayloadSizeRxFifoTop() {
   return size;
 }
 
-uint32_t nrf24_recvPacket(void* packet) {
+uint32_t nrf24_recvPacket(void* pPacket) {
   if(!nrf24_isPoweredOn())
     return NRF_DEVICE_NOT_POWERED_ON;
 
@@ -448,7 +448,7 @@ uint32_t nrf24_recvPacket(void* packet) {
   if(pipeId == RX_P_NO_FIFO_EMPTY)
     return NRF_NO_DATA_AVAILABLE;
 
-  return readPayload((uint8_t*)packet);
+  return readPayload((uint8_t*)pPacket);
 }
 
 void nrf24_flushRxFifo() {
@@ -463,7 +463,7 @@ void nrf24_flushTxFifo() {
   nrf24_csnHigh();
 }
 
-int8_t nrf24_sendPacket(void* packet, int8_t payloadSize, uint8_t listenAfterSend) {
+int8_t nrf24_sendPacket(void* pPacket, int8_t payloadSize, uint8_t listenAfterSend) {
   if(!nrf24_isPoweredOn())
     return NRF_DEVICE_NOT_POWERED_ON;
 
@@ -475,14 +475,14 @@ int8_t nrf24_sendPacket(void* packet, int8_t payloadSize, uint8_t listenAfterSen
 
   while(nrf24_txFifoIsFull());
   checkForCooldown();
-  writePayload((uint8_t*)packet, payloadSize);
+  writePayload((uint8_t*)pPacket, payloadSize);
 
   // To initially start a transmission, it is important that something in the TX FIFO
   // before pulling the chip enable pin high. If chip enable is already set when the payload is empty,
   // the transmission will NOT be initiated before ce got pulled low and high again!
   if(!nrf24_getCe()) {
     nrf24_ceHigh();
-    delayUs(10); // Delay from CE positive edge to CSN low
+    nrf24_delayUs(10); // Delay from CE positive edge to CSN low
   }
 
   if(listenAfterSend)
@@ -515,7 +515,7 @@ uint8_t nrf24_carrierIsPresent() {
 void nrf24_init() {
   spiInit();
   nrf24_csnHigh();
-  delayMs(10);
+  nrf24_delayUs(100);
 
   _txCooldownTimeMs = 0;
   nrf24_flushTxFifo();
