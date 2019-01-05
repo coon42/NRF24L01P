@@ -9,10 +9,10 @@ static uint32_t _txCooldownTimeMs;
 static void readRegister(uint8_t reg, void* pData, uint8_t len) {
   int i;
   nrf24_csnLow();
-  spiXmitByte(CMD_R_REGISTER | (0x1F & reg));
+  nrf24_spiXmitByte(CMD_R_REGISTER | (0x1F & reg));
 
   for(i = 0; i < len; i++)
-    ((uint8_t*)pData)[i] = spiXmitByte(0x00);
+    ((uint8_t*)pData)[i] = nrf24_spiXmitByte(0x00);
 
   nrf24_csnHigh();
 }
@@ -24,10 +24,10 @@ static void readRegisterB(uint8_t reg, void* pData) {
 static void writeRegister(uint8_t reg, void* pData, uint8_t len) {
   int i;
   nrf24_csnLow();
-  uint8_t status = spiXmitByte(CMD_W_REGISTER  | (0x1F & reg));
+  uint8_t status = nrf24_spiXmitByte(CMD_W_REGISTER  | (0x1F & reg));
 
   for(i = 0; i < len; i++)
-    spiXmitByte(((uint8_t*)pData)[i]);
+    nrf24_spiXmitByte(((uint8_t*)pData)[i]);
 
   nrf24_csnHigh();
 }
@@ -51,10 +51,10 @@ static int8_t readPayload(uint8_t* pPayload) {
     nrf24_flushRxFifo(); // datasheet page 51 says, this is necessary
 
   nrf24_csnLow();
-  spiXmitByte(CMD_R_RX_PAYLOAD);
+  nrf24_spiXmitByte(CMD_R_RX_PAYLOAD);
 
   for(i = 0; i < payloadSize; i++)
-    pPayload[i] = spiXmitByte(0x00);
+    pPayload[i] = nrf24_spiXmitByte(0x00);
 
   nrf24_csnHigh();
   clearRxInterrupt();
@@ -65,10 +65,10 @@ static int8_t readPayload(uint8_t* pPayload) {
 static void writePayload(uint8_t* pPayload, uint8_t payloadSize) {
   int i;
   nrf24_csnLow();
-  spiXmitByte(CMD_W_TX_PAYLOAD);
+  nrf24_spiXmitByte(CMD_W_TX_PAYLOAD);
 
   for(i = 0; i < payloadSize; i++)
-    spiXmitByte(pPayload[i]);
+    nrf24_spiXmitByte(pPayload[i]);
 
   nrf24_csnHigh();
 }
@@ -433,8 +433,8 @@ uint8_t nrf24_getPayloadSizeRxFifoTop() {
   uint8_t size;
 
   nrf24_csnLow();
-  spiXmitByte(CMD_R_RX_PL_WID);
-  size = spiXmitByte(0x00);
+  nrf24_spiXmitByte(CMD_R_RX_PL_WID);
+  size = nrf24_spiXmitByte(0x00);
   nrf24_csnHigh();
 
   return size;
@@ -453,13 +453,13 @@ uint32_t nrf24_recvPacket(void* pPacket) {
 
 void nrf24_flushRxFifo() {
   nrf24_csnLow();
-  spiXmitByte(CMD_FLUSH_RX);
+  nrf24_spiXmitByte(CMD_FLUSH_RX);
   nrf24_csnHigh();
 }
 
 void nrf24_flushTxFifo() {
   nrf24_csnLow();
-  spiXmitByte(CMD_FLUSH_TX);
+  nrf24_spiXmitByte(CMD_FLUSH_TX);
   nrf24_csnHigh();
 }
 
@@ -513,7 +513,7 @@ uint8_t nrf24_carrierIsPresent() {
 }
 
 void nrf24_init() {
-  spiInit();
+  nrf24_spiInit();
   nrf24_csnHigh();
   nrf24_delayUs(100);
 

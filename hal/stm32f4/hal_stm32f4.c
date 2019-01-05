@@ -45,7 +45,7 @@ uint8_t nrf24_getCe() {
   return GPIO_ReadInputDataBit(GPIOC, CHIP_ENABLE_PIN);
 }
 
-uint8_t spiXmitByte(uint8_t value) {
+uint8_t nrf24_spiXmitByte(uint8_t value) {
 	SPI3->DR = value; // write data to be transmitted to the SPI data register
 	while( !(SPI3->SR & SPI_I2S_FLAG_TXE) ); // wait until transmit complete
 	while( !(SPI3->SR & SPI_I2S_FLAG_RXNE) ); // wait until receive complete
@@ -54,7 +54,7 @@ uint8_t spiXmitByte(uint8_t value) {
 	return SPI3->DR; // return received data from SPI data register
 }
 
-void spiInit() {
+void nrf24_spiInit() {
   GPIO_InitTypeDef GPIO_InitStruct;
   RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOC, ENABLE);
 
@@ -74,7 +74,7 @@ void spiInit() {
 	// configure pins used by SPI3
 	// PC10 = SCK
 	// PC11 = MISO
-	// PC12 = MOSI 
+	// PC12 = MOSI
 
 	GPIO_InitStruct.GPIO_Pin = GPIO_Pin_10 | GPIO_Pin_11 | GPIO_Pin_12;
 	GPIO_InitStruct.GPIO_Mode = GPIO_Mode_AF;
