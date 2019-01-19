@@ -68,39 +68,40 @@ void nrf24_spiInit() {
   nrf24_csnHigh();
   nrf24_ceLow();
 
-	SPI_InitTypeDef SPI_InitStruct;
-	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOC, ENABLE);
+  SPI_InitTypeDef SPI_InitStruct;
+  RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOC, ENABLE);
 
-	// configure pins used by SPI3
-	// PC10 = SCK
-	// PC11 = MISO
-	// PC12 = MOSI
+  // configure pins used by SPI3
+  // PB3 = SCK
+  // PB4 = MISO
+  // PB5 = MOSI
 
-	GPIO_InitStruct.GPIO_Pin = GPIO_Pin_10 | GPIO_Pin_11 | GPIO_Pin_12;
-	GPIO_InitStruct.GPIO_Mode = GPIO_Mode_AF;
-	GPIO_InitStruct.GPIO_OType = GPIO_OType_PP;
-	GPIO_InitStruct.GPIO_Speed = GPIO_Speed_50MHz;
-	GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_NOPULL;
-	GPIO_Init(GPIOC, &GPIO_InitStruct);
+  GPIO_InitStruct.GPIO_Pin = GPIO_Pin_3 | GPIO_Pin_4 | GPIO_Pin_5;
+  GPIO_InitStruct.GPIO_Mode = GPIO_Mode_AF;
+  GPIO_InitStruct.GPIO_OType = GPIO_OType_PP;
+  GPIO_InitStruct.GPIO_Speed = GPIO_Speed_50MHz;
+  GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_NOPULL;
+  GPIO_Init(GPIOB, &GPIO_InitStruct);
+  RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOB, ENABLE);
 
-	GPIO_PinAFConfig(GPIOC, GPIO_PinSource10, GPIO_AF_SPI3);
-	GPIO_PinAFConfig(GPIOC, GPIO_PinSource11, GPIO_AF_SPI3);
-	GPIO_PinAFConfig(GPIOC, GPIO_PinSource12, GPIO_AF_SPI3);
+  GPIO_PinAFConfig(GPIOB, GPIO_PinSource3, GPIO_AF_SPI3);
+  GPIO_PinAFConfig(GPIOB, GPIO_PinSource4, GPIO_AF_SPI3);
+  GPIO_PinAFConfig(GPIOB, GPIO_PinSource5, GPIO_AF_SPI3);
 
-	RCC_APB1PeriphClockCmd(RCC_APB1Periph_SPI3, ENABLE);
+  RCC_APB1PeriphClockCmd(RCC_APB1Periph_SPI3, ENABLE);
 
-	SPI_InitStruct.SPI_Direction         = SPI_Direction_2Lines_FullDuplex;        // set to full duplex mode, seperate MOSI and MISO lines
-	SPI_InitStruct.SPI_Mode              = SPI_Mode_Master;                        // transmit in master mode, NSS pin has to be always high
-	SPI_InitStruct.SPI_DataSize          = SPI_DataSize_8b;                        // one packet of data is 8 bits wide
-	SPI_InitStruct.SPI_CPOL              = SPI_CPOL_Low;                           // clock is low when idle
-	SPI_InitStruct.SPI_CPHA              = SPI_CPHA_1Edge;                         // data sampled at first edge
-	SPI_InitStruct.SPI_NSS               = SPI_NSS_Soft | SPI_NSSInternalSoft_Set; // set the NSS management to internal and pull internal NSS high
-	SPI_InitStruct.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_4;                // SPI frequency is APB2 frequency / 4
-	SPI_InitStruct.SPI_FirstBit          = SPI_FirstBit_MSB;                       // data is transmitted MSB first
-	SPI_Init(SPI3, &SPI_InitStruct);
+  SPI_InitStruct.SPI_Direction         = SPI_Direction_2Lines_FullDuplex;        // set to full duplex mode, seperate MOSI and MISO lines
+  SPI_InitStruct.SPI_Mode              = SPI_Mode_Master;                        // transmit in master mode, NSS pin has to be always high
+  SPI_InitStruct.SPI_DataSize          = SPI_DataSize_8b;                        // one packet of data is 8 bits wide
+  SPI_InitStruct.SPI_CPOL              = SPI_CPOL_Low;                           // clock is low when idle
+  SPI_InitStruct.SPI_CPHA              = SPI_CPHA_1Edge;                         // data sampled at first edge
+  SPI_InitStruct.SPI_NSS               = SPI_NSS_Soft | SPI_NSSInternalSoft_Set; // set the NSS management to internal and pull internal NSS high
+  SPI_InitStruct.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_4;                // SPI frequency is APB2 frequency / 4
+  SPI_InitStruct.SPI_FirstBit          = SPI_FirstBit_MSB;                       // data is transmitted MSB first
+  SPI_Init(SPI3, &SPI_InitStruct);
 
-	SPI_Cmd(SPI3, ENABLE);
-	_prvInit_TIM3(); // enable Timer 3 for delay function
+  SPI_Cmd(SPI3, ENABLE);
+  _prvInit_TIM3(); // enable Timer 3 for delay function
 }
 
 void nrf24_delayUs(uint32_t microseconds) {
